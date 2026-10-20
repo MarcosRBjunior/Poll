@@ -13,7 +13,26 @@ const eslintConfig = defineConfig([
       "react/no-danger": "error",
     },
   },
+  {
+    // Prisma só em repository.ts (CLAUDE.md, Arquitetura e camadas).
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/features/*/repository.ts", "src/lib/db.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/generated/prisma/*", "@/lib/db", "@prisma/*"],
+              message: "Prisma só pode ser usado em src/features/*/repository.ts.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   globalIgnores([
+    "src/generated/**",
     ".next/**",
     "out/**",
     "build/**",

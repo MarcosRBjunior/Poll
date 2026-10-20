@@ -9,7 +9,7 @@ Referência de implementação do Criador de Enquetes (Projeto 07 do Portfólio 
 - **[A DEFINIR]** marca algo que ainda depende do Marcos. Não implemente antes da confirmação.
 - IDs: `D` decisão · `RF` requisito funcional · `RN` regra de negócio · `T` tela · `US` história · `CT` caso de teste · `F` fase.
 
-**Pendências abertas:** só o conteúdo das pesquisas 2 e 3 do seed (seção 3, D-12). A pesquisa do Nível 1 está completa, então nada bloqueia a Fase 2.
+**Pendências abertas:** nenhuma. O conteúdo das pesquisas 2 e 3 do seed (D-12) foi aprovado em 20/10/2026.
 
 ---
 
@@ -160,24 +160,24 @@ Regras gerais do seed:
 | 5   | Qual é a sua satisfação com o ecossistema JavaScript? | `SINGLE_CHOICE`   | Sim         | 1 (1) · 2 (2) · 3 (3) · 4 (4) · 5 (5)                            |
 | 6   | Que ferramenta falta no seu dia a dia?                | `LONG_TEXT`       | Não         | —                                                                |
 
-**Pesquisa 2 — "Como você trabalha com JavaScript"** · grupo Ecossistema JavaScript · **tem itens [A DEFINIR]**
+**Pesquisa 2 — "Como você trabalha com JavaScript"** · grupo Ecossistema JavaScript · **aprovada em 20/10/2026**
 
 | #   | Enunciado                                         | Tipo                                    | Opções (valor numérico)                                                                                 |
 | --- | ------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 1   | Em que área você atua?                            | [A DEFINIR — sugestão: `SINGLE_CHOICE`] | Front-end · Back-end · Full-stack · Mobile · Dados                                                      |
-| 2   | Qual é o tamanho da empresa em que você trabalha? | [A DEFINIR — sugestão: `SINGLE_CHOICE`] | [A DEFINIR — sugestão: Só eu · 2–10 · 11–50 · 51–200 · 201–1.000 · Mais de 1.000]                       |
-| 3   | Há quantos anos você trabalha com JavaScript?     | `SINGLE_CHOICE` com valores             | [A DEFINIR — sugestão: Menos de 1 (0,5) · 1–2 (1,5) · 3–5 (4) · 6–10 (8) · Mais de 10 (12)]             |
-| 4   | Qual é o seu tipo de projeto principal?           | [A DEFINIR — sugestão: `SINGLE_CHOICE`] | [A DEFINIR — sugestão: Produto da empresa · Agência ou consultoria · Freelance · Open source · Estudos] |
+| 1   | Em que área você atua?                            | `SINGLE_CHOICE` | Front-end · Back-end · Full-stack · Mobile · Dados                                                      |
+| 2   | Qual é o tamanho da empresa em que você trabalha? | `SINGLE_CHOICE` | Só eu · 2–10 · 11–50 · 51–200 · 201–1.000 · Mais de 1.000                       |
+| 3   | Há quantos anos você trabalha com JavaScript?     | `SINGLE_CHOICE` com valores             | Menos de 1 (0,5) · 1–2 (1,5) · 3–5 (4) · 6–10 (8) · Mais de 10 (12)             |
+| 4   | Qual é o seu tipo de projeto principal?           | `SINGLE_CHOICE` | Produto da empresa · Agência ou consultoria · Freelance · Open source · Estudos |
 
-**Pesquisa 3 — "Entretenimento favorito"** · grupo Entretenimento · **tem itens [A DEFINIR]**
+**Pesquisa 3 — "Entretenimento favorito"** · grupo Entretenimento · **aprovada em 20/10/2026**
 
 | #   | Enunciado                                              | Tipo                                      | Opções (valor numérico)                                                                                                 |
 | --- | ------------------------------------------------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| 1   | Qual é o seu formato de entretenimento preferido?      | [A DEFINIR — sugestão: `SINGLE_CHOICE`]   | Séries · Filmes · Games · Podcasts · Livros                                                                             |
-| 2   | Onde você costuma consumir entretenimento?             | [A DEFINIR — sugestão: `MULTIPLE_CHOICE`] | [A DEFINIR — sugestão: Streaming de vídeo · Cinema · Console ou PC · Celular · Livro físico ou e-reader · App de áudio] |
-| 3   | Quantas horas por semana você dedica a entretenimento? | `SINGLE_CHOICE` com valores               | [A DEFINIR — sugestão: Menos de 2 (1) · 2–5 (3,5) · 6–10 (8) · 11–20 (15) · Mais de 20 (25)]                            |
+| 1   | Qual é o seu formato de entretenimento preferido?      | `SINGLE_CHOICE`   | Séries · Filmes · Games · Podcasts · Livros                                                                             |
+| 2   | Onde você costuma consumir entretenimento?             | `MULTIPLE_CHOICE` | Streaming de vídeo · Cinema · Console ou PC · Celular · Livro físico ou e-reader · App de áudio |
+| 3   | Quantas horas por semana você dedica a entretenimento? | `SINGLE_CHOICE` com valores               | Menos de 2 (1) · 2–5 (3,5) · 6–10 (8) · 11–20 (15) · Mais de 20 (25)                            |
 
-Enquanto os itens [A DEFINIR] não forem confirmados, o seed cria os dois grupos e apenas a Pesquisa 1.
+As sugestões das pesquisas 2 e 3 foram aprovadas em 20/10/2026; o seed cria os dois grupos e as três pesquisas.
 
 ---
 
@@ -806,10 +806,12 @@ model RateLimitBucket {
 
 Regras que o schema Prisma não expressa:
 
+> `btrim` recebe a lista `E' \t\n\r'` porque, sem ela, remove só o espaço comum e aceitaria texto feito de Tab e quebra de linha (corrigido em 20/10/2026, migração `btrim_espacos_em_branco`). Não incluir `\v`: em `E''` ele vira a letra "v".
+
 ```sql
 -- RN-07: texto não pode ser só espaços
 ALTER TABLE "Answer" ADD CONSTRAINT answer_text_not_blank
-  CHECK ("textValue" IS NULL OR length(btrim("textValue")) > 0);
+  CHECK ("textValue" IS NULL OR length(btrim("textValue", E' \t\n\r')) > 0);
 
 -- RF-06: limites de seleção coerentes
 ALTER TABLE "Question" ADD CONSTRAINT question_selection_bounds
@@ -820,12 +822,12 @@ ALTER TABLE "Question" ADD CONSTRAINT question_selection_bounds
 
 -- RN-03: rótulo único entre opções ativas, sem diferenciar maiúsculas
 CREATE UNIQUE INDEX question_option_label_active_uq
-  ON "QuestionOption" ("questionId", lower(btrim("label")))
+  ON "QuestionOption" ("questionId", lower(btrim("label", E' \t\n\r')))
   WHERE "archivedAt" IS NULL;
 
 -- RN-01: título com pelo menos 3 caracteres úteis
 ALTER TABLE "Survey" ADD CONSTRAINT survey_title_min
-  CHECK (length(btrim("title")) >= 3);
+  CHECK (length(btrim("title", E' \t\n\r')) >= 3);
 
 -- RF-20: vitrine da página inicial
 CREATE INDEX survey_listed_idx ON "Survey" ("publishedAt" DESC)
@@ -1262,7 +1264,7 @@ Uma fase só está pronta quando todas as suas histórias cumprem os critérios 
 **US-1.2 — Como dono do projeto, quero as pesquisas iniciais publicadas, para ter o Nível 1 pronto para demonstrar.** · depende de US-1.1; validação final depois da US-4.1
 
 - **Entregas:** `prisma/seed.ts` idempotente: procura o administrador pelo `ADMIN_EMAIL`, cria os grupos e as pesquisas da seção 3 (D-12). Nos testes, o administrador é inserido direto no banco.
-- **Critérios de aceite:** RF-19 (1), (2) e (3); enquanto houver itens [A DEFINIR] em D-12, só a Pesquisa 1 é criada.
+- **Critérios de aceite:** RF-19 (1), (2) e (3); D-12 aprovada em 20/10/2026, então o seed cria as três pesquisas.
 
 **F2 pronta quando:** migrações rodam local e na Vercel, e cada restrição manual tem teste.
 
