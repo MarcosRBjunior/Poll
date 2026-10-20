@@ -16,9 +16,13 @@ Requer Node 24+ e Docker.
 
 ```bash
 npm install
-cp .env.example .env
+cp .env.example .env   # preencha DATABASE_URL e DIRECT_URL (veja abaixo)
+npm run db:up          # Postgres em localhost:5440, com os bancos poll e poll_test
+npm run db:migrate
 npm run dev            # http://localhost:3000
 ```
+
+Para o banco local, use `postgresql://poll:poll@localhost:5440/poll` nas duas variáveis. Os testes usam o banco `poll_test` (ou `TEST_DATABASE_URL`) e precisam do Postgres de pé.
 
 ## Comandos
 
@@ -37,4 +41,4 @@ npm run dev            # http://localhost:3000
 
 ## Saúde
 
-`GET /api/health` → `200 { "status": "ok" }`.
+`GET /api/health` → `200 { "status": "ok" }`, ou `503 { "status": "unavailable" }` se o banco não responder.

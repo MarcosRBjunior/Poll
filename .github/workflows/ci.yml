@@ -13,6 +13,18 @@ jobs:
   check:
     name: Lint, tipos, testes e build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: poll
+          POSTGRES_PASSWORD: poll
+          POSTGRES_DB: poll_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U poll" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://poll:poll@localhost:5432/poll_test
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -30,6 +42,19 @@ jobs:
     name: E2E
     runs-on: ubuntu-latest
     needs: check
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: poll
+          POSTGRES_PASSWORD: poll
+          POSTGRES_DB: poll
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U poll" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://poll:poll@localhost:5432/poll
+      DIRECT_URL: postgresql://poll:poll@localhost:5432/poll
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -38,6 +63,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - run: npx prisma migrate deploy
       - run: npm run build
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v7
