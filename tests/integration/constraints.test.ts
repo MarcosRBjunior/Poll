@@ -7,8 +7,15 @@ import { createQuestion, createSurvey, db, resetDatabase } from "../fixtures/db"
 beforeEach(resetDatabase);
 
 describe("survey_title_min (RN-01)", () => {
-  it("recusa título com menos de 3 caracteres úteis", async () => {
-    await expect(createSurvey({ title: "  ab  " })).rejects.toThrow(/survey_title_min/);
+  it.each([
+    ["espaços", "  ab  "],
+    ["Tab e quebra de linha", "\t\nab\r\n"],
+  ])("recusa título com menos de 3 caracteres úteis (%s)", async (_, title) => {
+    await expect(createSurvey({ title })).rejects.toThrow(/survey_title_min/);
+  });
+
+  it("preserva a letra v nas pontas", async () => {
+    await expect(createSurvey({ title: "vav" })).resolves.toBeDefined();
   });
 
   it("aceita título com 3 caracteres úteis", async () => {
@@ -77,9 +84,11 @@ describe("answer_text_not_blank (RN-07)", () => {
     });
   }
 
-  // btrim() sem segundo argumento remove só espaços, como está na spec 6.8.
-  it("recusa texto só com espaços", async () => {
-    await expect(createAnswer("    ")).rejects.toThrow(/answer_text_not_blank/);
+  it.each([
+    ["espaços", "    "],
+    ["Tab e quebra de linha", " \t\n\r\n "],
+  ])("recusa texto só com espaço em branco (%s)", async (_, text) => {
+    await expect(createAnswer(text)).rejects.toThrow(/answer_text_not_blank/);
   });
 
   it("aceita texto com conteúdo e texto nulo", async () => {

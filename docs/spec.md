@@ -806,10 +806,12 @@ model RateLimitBucket {
 
 Regras que o schema Prisma não expressa:
 
+> `btrim` recebe a lista `E' \t\n\r'` porque, sem ela, remove só o espaço comum e aceitaria texto feito de Tab e quebra de linha (corrigido em 20/10/2026, migração `btrim_espacos_em_branco`). Não incluir `\v`: em `E''` ele vira a letra "v".
+
 ```sql
 -- RN-07: texto não pode ser só espaços
 ALTER TABLE "Answer" ADD CONSTRAINT answer_text_not_blank
-  CHECK ("textValue" IS NULL OR length(btrim("textValue")) > 0);
+  CHECK ("textValue" IS NULL OR length(btrim("textValue", E' \t\n\r')) > 0);
 
 -- RF-06: limites de seleção coerentes
 ALTER TABLE "Question" ADD CONSTRAINT question_selection_bounds
@@ -820,12 +822,12 @@ ALTER TABLE "Question" ADD CONSTRAINT question_selection_bounds
 
 -- RN-03: rótulo único entre opções ativas, sem diferenciar maiúsculas
 CREATE UNIQUE INDEX question_option_label_active_uq
-  ON "QuestionOption" ("questionId", lower(btrim("label")))
+  ON "QuestionOption" ("questionId", lower(btrim("label", E' \t\n\r')))
   WHERE "archivedAt" IS NULL;
 
 -- RN-01: título com pelo menos 3 caracteres úteis
 ALTER TABLE "Survey" ADD CONSTRAINT survey_title_min
-  CHECK (length(btrim("title")) >= 3);
+  CHECK (length(btrim("title", E' \t\n\r')) >= 3);
 
 -- RF-20: vitrine da página inicial
 CREATE INDEX survey_listed_idx ON "Survey" ("publishedAt" DESC)
