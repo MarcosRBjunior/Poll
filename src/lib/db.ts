@@ -10,8 +10,10 @@ let client: PrismaClient | undefined;
 function createClient() {
   const adapter = new PrismaPg({
     connectionString: getEnv().DATABASE_URL,
-    // Plano gratuito do Prisma Postgres: 10 conexões no total [PROPOSTA].
-    max: 5,
+    // Por ora DATABASE_URL na Vercel é a conexão direta (db.prisma.io): a integração não deixa
+    // editá-la para pooled.db.prisma.io. Pool pequeno para caber no plano gratuito.
+    // Pendência para a F9: usar a URL com pool.
+    max: 3,
     connectionTimeoutMillis: 5_000,
   });
   return new PrismaClient({ adapter });
