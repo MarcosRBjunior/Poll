@@ -28,11 +28,22 @@ describe("parseEnv", () => {
 });
 
 describe("serverEnvSchema", () => {
-  it("aceita o ambiente da F1 sem variáveis definidas", () => {
-    expect(parseEnv(serverEnvSchema, {})).toEqual({ NODE_ENV: "development" });
+  const DATABASE_URL = "postgresql://poll:poll@localhost:5440/poll";
+
+  it("exige DATABASE_URL", () => {
+    expect(() => parseEnv(serverEnvSchema, {})).toThrow(/DATABASE_URL: obrigatória/);
+  });
+
+  it("aceita o ambiente mínimo da F2", () => {
+    expect(parseEnv(serverEnvSchema, { DATABASE_URL })).toEqual({
+      NODE_ENV: "development",
+      DATABASE_URL,
+    });
   });
 
   it("recusa URL opcional malformada", () => {
-    expect(() => parseEnv(serverEnvSchema, { SENTRY_DSN: "x" })).toThrow(/SENTRY_DSN/);
+    expect(() => parseEnv(serverEnvSchema, { DATABASE_URL, SENTRY_DSN: "x" })).toThrow(
+      /SENTRY_DSN/,
+    );
   });
 });

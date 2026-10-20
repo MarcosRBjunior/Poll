@@ -2,8 +2,10 @@ import { z } from "zod";
 
 // Só entram aqui as variáveis que a fase em curso usa. Cada fase acrescenta as suas:
 // banco na F2, Supabase e ADMIN_EMAIL na F3, RESPONDENT_KEY_SECRET na F4 (spec, US-0.1).
+// DIRECT_URL fica fora: só as migrações a usam, via prisma.config.ts.
 export const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  DATABASE_URL: z.url(),
   SENTRY_DSN: z.url().optional(),
   RATE_LIMIT_REDIS_URL: z.url().optional(),
 });

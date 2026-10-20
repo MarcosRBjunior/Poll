@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SurveyStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum QuestionType {
+  SINGLE_CHOICE
+  MULTIPLE_CHOICE
+  SHORT_TEXT
+  LONG_TEXT
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum RequestStatus {
+  PENDING
+  IN_REVIEW
+  ACCEPTED
+  REJECTED
+  DONE
+}
+
+// Espelho local do usuário do Supabase Auth: id igual ao do Supabase (D-01).
+model User {
+  id        String           @id @db.Uuid
+  email     String           @unique
+  name      String?
+  role      UserRole         @default(USER) // ADMIN para o e-mail em ADMIN_EMAIL (RN-12)
+  createdAt DateTime         @default(now()) @db.Timestamptz
+  surveys   Survey[]
+  groups    SurveyGroup[]
+  responses SurveyResponse[]
+  requests  SurveyRequest[]
+}
+
+model SurveyGroup {
+  id          String   @id @default(cuid())
+  ownerId     String   @db.Uuid
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String   @db.VarChar(80)
+  description String?  @db.VarChar(500)
+  surveys     Survey[]
+  createdAt   DateTime @default(now()) @db.Timestamptz
+  updatedAt   DateTime @updatedAt @db.Timestamptz
+
+  @@unique([ownerId, name])
+}
+
+model Survey {
+  id          String           @id @default(cuid())
+  ownerId     String           @db.Uuid
+  owner       User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  groupId     String?
+  group       SurveyGroup?     @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  title       String           @db.VarChar(120)
+  description String?          @db.VarChar(1000)
+  slug        String           @unique @db.VarChar(140)
+  status      SurveyStatus     @default(DRAFT)
+  isListed    Boolean          @default(false) // vitrine da página inicial (RF-20)
+  version     Int              @default(1) // conflito de edição (RN-17)
+  publishedAt DateTime?        @db.Timestamptz
+  closedAt    DateTime?        @db.Timestamptz
+  deletedAt   DateTime?        @db.Timestamptz // exclusão lógica (RN-19)
+  createdAt   DateTime         @default(now()) @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @db.Timestamptz
+  questions   Question[]
+  responses   SurveyResponse[]
+  request     SurveyRequest?
+
+  @@index([ownerId, deletedAt, updatedAt(sort: Desc)])
+  @@index([groupId])
+}
+
+model Question {
+  id            String           @id @default(cuid())
+  surveyId      String
+  survey        Survey           @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  type          QuestionType
+  title         String           @db.VarChar(300)
+  helpText      String?          @db.VarChar(500)
+  required      Boolean          @default(true)
+  position      Int
+  minSelections Int?
+  maxSelections Int?
+  archivedAt    DateTime?        @db.Timestamptz // RN-11
+  createdAt     DateTime         @default(now()) @db.Timestamptz
+  updatedAt     DateTime         @updatedAt @db.Timestamptz
+  options       QuestionOption[]
+  answers       Answer[]
+
+  @@index([surveyId, position])
+}
+
+model QuestionOption {
+  id         String            @id @default(cuid())
+  questionId String
+  question   Question          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  label      String            @db.VarChar(120)
+  value      Decimal?          @db.Decimal(10, 2) // RF-07
+  position   Int
+  archivedAt DateTime?         @db.Timestamptz
+  createdAt  DateTime          @default(now()) @db.Timestamptz
+  updatedAt  DateTime          @updatedAt @db.Timestamptz
+  selections AnswerSelection[]
+
+  @@index([questionId, position])
+}
+
+model SurveyResponse {
+  id             String   @id @default(cuid())
+  surveyId       String
+  survey         Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  userId         String?  @db.Uuid // preenchido quando o respondente entrou (D-02)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  respondentKey  String?  @db.VarChar(64) // HMAC do token do cookie (RN-14)
+  idempotencyKey String   @unique @db.Uuid
+  submittedAt    DateTime @default(now()) @db.Timestamptz
+  answers        Answer[]
+
+  @@unique([surveyId, respondentKey])
+  @@unique([surveyId, userId])
+  @@index([surveyId, submittedAt(sort: Desc)])
+}
+
+model Answer {
+  id         String            @id @default(cuid())
+  responseId String
+  response   SurveyResponse    @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question          @relation(fields: [questionId], references: [id], onDelete: NoAction)
+  textValue  String?           @db.VarChar(2000)
+  selections AnswerSelection[]
+
+  @@unique([responseId, questionId])
+  @@index([questionId])
+}
+
+model AnswerSelection {
+  answerId String
+  answer   Answer         @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  optionId String
+  option   QuestionOption @relation(fields: [optionId], references: [id], onDelete: NoAction)
+
+  @@id([answerId, optionId])
+  @@index([optionId])
+}
+
+model SurveyRequest {
+  id                 String        @id @default(cuid())
+  requesterId        String        @db.Uuid
+  requester          User          @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+  topic              String        @db.VarChar(120)
+  goal               String        @db.VarChar(1000)
+  suggestedQuestions String?       @db.VarChar(4000)
+  audience           String?       @db.VarChar(200)
+  status             RequestStatus @default(PENDING) // RN-22
+  adminNote          String?       @db.VarChar(1000)
+  surveyId           String?       @unique
+  survey             Survey?       @relation(fields: [surveyId], references: [id], onDelete: SetNull)
+  createdAt          DateTime      @default(now()) @db.Timestamptz
+  updatedAt          DateTime      @updatedAt @db.Timestamptz
+
+  @@index([status, createdAt])
+  @@index([requesterId, createdAt(sort: Desc)])
+}
+
+// Limite de envios sem Redis: uma linha por escopo + IP em hash, janela de 60 s [PROPOSTA].
+model RateLimitBucket {
+  key         String   @id @db.VarChar(160)
+  windowStart DateTime @db.Timestamptz
+  count       Int      @default(0)
+
+  @@index([windowStart])
+}
