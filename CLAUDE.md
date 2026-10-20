@@ -3,7 +3,7 @@
 App web full-stack: o administrador cria pesquisas sem código, qualquer pessoa responde por link e os resultados viram gráficos, números e um painel de tendências por grupo de pesquisas. Tema inicial: ferramentas JavaScript favoritas e entretenimento.
 
 - Especificação completa: `docs/spec.md`. Os IDs citados aqui (RF, RN, US, D) estão definidos lá.
-- O repositório começa vazio. Fase atual: **1 — Fundação**.
+- Fase atual: **2 — Banco**. Fase 1 concluída em 19/10/2026 (produção: https://poll-chi-six.vercel.app).
 
 ## Como trabalhar aqui
 
