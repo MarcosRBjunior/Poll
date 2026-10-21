@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { AppError, type ErrorCode, type ErrorDetail } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -74,6 +75,7 @@ export function withRoute<C = unknown>(handler: Handler<C>) {
     try {
       response = await handler(request, context, { requestId });
     } catch (error) {
+      unstable_rethrow(error); // sinais internos do Next (rota dinâmica, redirect, notFound)
       if (!(error instanceof AppError) && !(error instanceof z.ZodError)) {
         logger.error("unhandled error", { requestId, error });
       }
@@ -90,4 +92,15 @@ export function withRoute<C = unknown>(handler: Handler<C>) {
     });
     return response;
   };
+}
+
+/**
+ * Rotas que escrevem só aceitam chamadas da própria origem (CSRF, spec 10.2).
+ * Sem `Origin` também recusa: navegadores sempre o enviam em POST.
+ */
+export function assertSameOrigin(request: Request): void {
+  const origin = request.headers.get("origin");
+  if (origin !== new URL(request.url).origin) {
+    throw new AppError("FORBIDDEN_ORIGIN", "Origem não permitida.");
+  }
 }
