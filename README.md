@@ -4,7 +4,7 @@ O administrador cria pesquisas sem código, qualquer pessoa responde por link e 
 
 Projeto 07 do Portfólio Boost Program. Especificação em [`docs/spec.md`](docs/spec.md).
 
-> Em construção — fase atual: **2, Banco**. Produção: https://poll-chi-six.vercel.app
+> Em construção — fase atual: **3, Login**. Produção: https://poll-chi-six.vercel.app
 
 ## Stack
 
@@ -26,18 +26,18 @@ Para o banco local, use `postgresql://poll:poll@localhost:5440/poll` nas duas va
 
 ## Comandos
 
-| Comando                 | O que faz                                         |
-| ----------------------- | ------------------------------------------------- |
-| `npm run dev`           | Servidor de desenvolvimento                       |
-| `npm run lint`          | ESLint                                            |
-| `npm run format`        | Prettier                                          |
-| `npm run typecheck`     | Checagem de tipos                                 |
-| `npm test`              | Testes unitários, de integração e de API (Vitest) |
-| `npm run test:coverage` | Testes com cobertura                              |
-| `npm run test:e2e`      | Testes ponta a ponta (Playwright)                 |
-| `npm run db:up`         | Postgres local via Docker Compose                 |
-| `npm run db:migrate`    | Migrações (a partir da fase 2)                    |
-| `npm run db:seed`       | Seed (a partir da fase 2)                         |
+| Comando                 | O que faz                                          |
+| ----------------------- | -------------------------------------------------- |
+| `npm run dev`           | Servidor de desenvolvimento                        |
+| `npm run lint`          | ESLint                                             |
+| `npm run format`        | Prettier                                           |
+| `npm run typecheck`     | Checagem de tipos                                  |
+| `npm test`              | Testes unitários, de integração e de API (Vitest)  |
+| `npm run test:coverage` | Testes com cobertura                               |
+| `npm run test:e2e`      | Testes ponta a ponta (Playwright)                  |
+| `npm run db:up`         | Postgres local via Docker Compose                  |
+| `npm run db:migrate`    | Migrações (prisma migrate dev)                     |
+| `npm run db:seed`       | Seed (o administrador precisa ter entrado uma vez) |
 
 ## Saúde
 
