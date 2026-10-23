@@ -33,6 +33,7 @@ describe("serverEnvSchema", () => {
     NEXT_PUBLIC_SUPABASE_URL: "https://exemplo.supabase.co",
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_x",
     ADMIN_EMAIL: "admin@example.com",
+    RESPONDENT_KEY_SECRET: "x".repeat(32),
   };
 
   it("exige DATABASE_URL", () => {
@@ -47,6 +48,12 @@ describe("serverEnvSchema", () => {
 
   it("aceita o ambiente mínimo da F3", () => {
     expect(parseEnv(serverEnvSchema, minimal)).toEqual({ NODE_ENV: "development", ...minimal });
+  });
+
+  it("exige RESPONDENT_KEY_SECRET com pelo menos 32 caracteres (F4)", () => {
+    expect(() => parseEnv(serverEnvSchema, { ...minimal, RESPONDENT_KEY_SECRET: "curto" })).toThrow(
+      /RESPONDENT_KEY_SECRET: precisa de pelo menos 32 caracteres/,
+    );
   });
 
   it("normaliza o ADMIN_EMAIL para comparar sem diferença de caixa", () => {
