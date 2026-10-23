@@ -24,6 +24,10 @@ npm run dev            # http://localhost:3000
 
 Para o banco local, use `postgresql://poll:poll@localhost:5440/poll` nas duas variáveis. Os testes usam o banco `poll_test` (ou `TEST_DATABASE_URL`) e precisam do Postgres de pé.
 
+O login usa o Supabase Auth (GitHub e link por e-mail). Preencha `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e `ADMIN_EMAIL` no `.env`; o Supabase precisa ter `http://localhost:3000/api/auth/callback` entre as URLs de retorno. Só o e-mail em `ADMIN_EMAIL` vira administrador.
+
+Os testes de sessão real usam um projeto Supabase separado, só de teste: copie as variáveis `TEST_*` do `.env.example` para `.env.test.local`. Sem elas, esses testes são pulados localmente; no CI, faltar alguma é erro.
+
 ## Comandos
 
 | Comando                 | O que faz                                          |

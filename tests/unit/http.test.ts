@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { type ErrorBody, json, withRoute } from "@/lib/http";
+import { type ErrorBody, json, withRoute, assertSameOrigin } from "@/lib/http";
 
 const request = () => new Request("http://localhost/api/v1/test");
 
@@ -63,5 +63,24 @@ describe("withRoute", () => {
     expect(JSON.parse(text)).toEqual({
       error: { code: "INTERNAL_ERROR", message: "Erro inesperado.", details: [], requestId },
     });
+  });
+});
+
+describe("assertSameOrigin", () => {
+  const post = (headers: Record<string, string>) =>
+    new Request("https://poll.example/api/auth/signout", { method: "POST", headers });
+
+  it("aceita a própria origem", () => {
+    expect(() => assertSameOrigin(post({ origin: "https://poll.example" }))).not.toThrow();
+  });
+
+  it.each([
+    ["outra origem", { origin: "https://evil.example" }],
+    ["subdomínio", { origin: "https://evil.poll.example" }],
+    ["sem Origin", {}],
+  ])("recusa %s com FORBIDDEN_ORIGIN", (_, headers) => {
+    expect(() => assertSameOrigin(post(headers))).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN_ORIGIN" }),
+    );
   });
 });

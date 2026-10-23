@@ -6,6 +6,10 @@ import { z } from "zod";
 export const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.url(),
+  NEXT_PUBLIC_SUPABASE_URL: z.url(),
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string(),
+  // Normalizado para a comparação com o e-mail da sessão não depender de caixa ou espaços.
+  ADMIN_EMAIL: z.string().trim().toLowerCase().pipe(z.email()),
   SENTRY_DSN: z.url().optional(),
   RATE_LIMIT_REDIS_URL: z.url().optional(),
 });
