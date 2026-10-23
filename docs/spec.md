@@ -997,7 +997,7 @@ src/app/
 ### T14 — Privacidade · `/privacy` · F4
 
 - **Acesso:** qualquer pessoa. **Origem:** D-16.
-- **Mostra, em texto simples:** que dados são coletados (respostas; com login, o vínculo à conta; o cookie de respondente; o IP apenas em hash, para limitar envios); que números, gráficos e comentários ficam públicos sem identificar quem respondeu; que não se deve escrever dados pessoais nos comentários; um contato do responsável [A DEFINIR: qual contato exibir].
+- **Mostra, em texto simples:** que dados são coletados (respostas; com login, o vínculo à conta; o cookie de respondente; o IP apenas em hash, para limitar envios); que números, gráficos e comentários ficam públicos sem identificar quem respondeu; que não se deve escrever dados pessoais nos comentários; um contato do responsável: link para as Issues do repositório no GitHub (decidido em 23/10/2026).
 
 ---
 
