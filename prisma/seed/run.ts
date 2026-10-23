@@ -2,6 +2,8 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { slugify } from "@/lib/slug";
 import { seedGroups, seedSurveys, type SeedQuestion } from "./data";
 
+const seedTransactionOptions = { maxWait: 10_000, timeout: 120_000 };
+
 export class SeedError extends Error {
   override readonly name = "SeedError";
 }
@@ -28,6 +30,8 @@ export async function runSeed(
     );
   }
 
+  // São ~40 comandos em sequência. Contra um banco remoto, cada ida e volta custa centenas de ms
+  // e o limite padrão da transação interativa (5 s) estoura: o Prisma desfaz tudo no meio.
   return db.$transaction(async (tx) => {
     const groupIds = new Map<string, string>();
     for (const name of seedGroups) {
@@ -76,5 +80,5 @@ export async function runSeed(
       result.created.push(slug);
     }
     return result;
-  });
+  }, seedTransactionOptions);
 }
