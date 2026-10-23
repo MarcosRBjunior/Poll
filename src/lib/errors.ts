@@ -28,6 +28,9 @@ export type ErrorCode = (typeof errorCodes)[number];
 
 export type ErrorDetail = { path: string; message: string };
 
+/** Dados extras que viram cabeçalho HTTP (ex.: Retry-After do 429). */
+export type ErrorMeta = { retryAfter?: number };
+
 export class AppError extends Error {
   override readonly name = "AppError";
 
@@ -35,6 +38,7 @@ export class AppError extends Error {
     readonly code: ErrorCode,
     message: string,
     readonly details: ErrorDetail[] = [],
+    readonly meta: ErrorMeta = {},
   ) {
     super(message);
   }

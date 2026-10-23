@@ -16,7 +16,7 @@ export const cookieStoreMock = {
 /** Coloque no topo do arquivo de teste: `vi.mock("next/headers", () => nextHeadersMock)`. */
 export const nextHeadersMock = { cookies: vi.fn(async () => cookieStoreMock) };
 
-export function useCookies(cookies: Cookie[]) {
+export function setCookies(cookies: Cookie[]) {
   cookieJar.clear();
   for (const { name, value } of cookies) cookieJar.set(name, value);
 }
