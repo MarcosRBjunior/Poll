@@ -46,7 +46,9 @@ function body(code: ErrorCode, message: string, details: ErrorDetail[], requestI
 
 export function errorResponse(error: unknown, requestId: string): Response {
   if (error instanceof AppError) {
-    return body(error.code, error.message, error.details, requestId);
+    const response = body(error.code, error.message, error.details, requestId);
+    if (error.meta.retryAfter) response.headers.set("retry-after", String(error.meta.retryAfter));
+    return response;
   }
   if (error instanceof z.ZodError) {
     const details = error.issues.map((issue) => ({

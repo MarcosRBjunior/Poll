@@ -84,3 +84,13 @@ describe("assertSameOrigin", () => {
     );
   });
 });
+
+describe("Retry-After", () => {
+  it("vira cabeçalho no 429", async () => {
+    const response = await withRoute(() => {
+      throw new AppError("RATE_LIMITED", "x", [], { retryAfter: 42 });
+    })(new Request("http://localhost/x"), undefined);
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBe("42");
+  });
+});

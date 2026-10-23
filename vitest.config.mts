@@ -26,7 +26,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/{unit,integration,api}/**/*.test.ts"],
+    include: ["tests/{unit,integration,api}/**/*.test.ts", "tests/components/**/*.test.tsx"],
     env: {
       ...testEnv,
       DATABASE_URL: testDatabaseUrl,
@@ -36,6 +36,7 @@ export default defineConfig({
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
         testEnv.TEST_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_test",
       ADMIN_EMAIL: testEnv.TEST_ADMIN_EMAIL ?? "admin@example.com",
+      RESPONDENT_KEY_SECRET: "segredo-de-teste-com-pelo-menos-32-caracteres",
     },
     globalSetup: ["tests/setup/global-db.ts"],
     // Os arquivos compartilham o mesmo banco e limpam as tabelas entre testes.
