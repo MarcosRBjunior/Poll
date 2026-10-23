@@ -8,11 +8,14 @@ export const testSupabase = {
   user: { email: process.env.TEST_USER_EMAIL, password: process.env.TEST_USER_PASSWORD },
 };
 
-export const hasTestSupabase = Object.values({
-  ...testSupabase,
-  ...testSupabase.admin,
-  ...testSupabase.user,
-}).every((value) => typeof value === "string" && value !== "");
+export const hasTestSupabase = [
+  testSupabase.url,
+  testSupabase.key,
+  testSupabase.admin.email,
+  testSupabase.admin.password,
+  testSupabase.user.email,
+  testSupabase.user.password,
+].every((value) => typeof value === "string" && value !== "");
 
 if (!hasTestSupabase && process.env.CI) {
   throw new Error("CI sem as credenciais do projeto Supabase de teste (secrets TEST_*).");

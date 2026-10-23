@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/auth";
@@ -17,6 +18,7 @@ export default function AdminLayout({ children }: LayoutProps<"/admin">) {
 }
 
 async function AdminGuard({ children }: { children: React.ReactNode }) {
+  await connection(); // sessão é por requisição: nada desta área entra no prerender
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/admin");
   if (user.role !== "ADMIN") notFound();
