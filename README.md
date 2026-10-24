@@ -4,7 +4,7 @@ O administrador cria pesquisas sem código, qualquer pessoa responde por link e 
 
 Projeto 07 do Portfólio Boost Program. Especificação em [`docs/spec.md`](docs/spec.md).
 
-> Em construção — fase atual: **4, Responder pesquisa**. Produção: https://poll-chi-six.vercel.app
+> Em construção — fase atual: **5, Resultados**. Produção: https://poll-chi-six.vercel.app
 
 ## Stack
 
