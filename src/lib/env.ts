@@ -10,6 +10,8 @@ export const serverEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string(),
   // Normalizado para a comparação com o e-mail da sessão não depender de caixa ou espaços.
   ADMIN_EMAIL: z.string().trim().toLowerCase().pipe(z.email()),
+  // Chave do HMAC do token de respondente e do IP (spec 6.5). Nunca vai para o navegador.
+  RESPONDENT_KEY_SECRET: z.string().min(32, "precisa de pelo menos 32 caracteres"),
   SENTRY_DSN: z.url().optional(),
   RATE_LIMIT_REDIS_URL: z.url().optional(),
 });
