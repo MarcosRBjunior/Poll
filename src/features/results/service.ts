@@ -1,13 +1,27 @@
+import { CSV_BOM, csvRow } from "@/lib/csv";
 import { AppError } from "@/lib/errors";
+import { formatDateTime, todayIso } from "@/lib/format";
+import { skipFor, type Page } from "@/lib/pagination";
 import {
   countAnswers,
   countResponsesPerDay,
+  findResponsePage,
   findResultsSurvey,
+  findTexts,
+  iterateResponses,
   type AnswerCounts,
   type DayCount,
+  type ResponseRow,
   type ResultsSurveyRecord,
+  type TextRow,
 } from "./repository";
-import { periodSchema, type Period } from "./schemas";
+import {
+  exportQuerySchema,
+  periodSchema,
+  responsesQuerySchema,
+  textsQuerySchema,
+  type Period,
+} from "./schemas";
 import { percent, weightedMean, weightedMedian } from "./stats";
 
 type QuestionType = ResultsSurveyRecord["questions"][number]["type"];
@@ -159,4 +173,128 @@ function nextDay(date: string): string {
   const d = new Date(`${date}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
+}
+
+// ---- Textos (comentários) ----
+
+const isTextType = (type: QuestionType) => type === "SHORT_TEXT" || type === "LONG_TEXT";
+
+async function textsOf(survey: ResultsSurveyRecord, questionId: string, query: unknown) {
+  const question = survey.questions.find((q) => q.id === questionId);
+  if (!question || !isTextType(question.type)) {
+    throw new AppError("NOT_FOUND", "Pergunta não encontrada.");
+  }
+  const page = textsQuerySchema.parse(query);
+  const { data, total } = await findTexts(survey.id, questionId, {
+    skip: skipFor(page),
+    take: page.pageSize,
+  });
+  return { data, total, ...page } satisfies Page<TextRow>;
+}
+
+/** Comentários públicos (`GET /api/v1/public/surveys/{slug}/questions/{id}/texts`, RN-23). */
+export async function getPublicTexts(slug: string, questionId: string, query: unknown) {
+  return textsOf(await loadPublicResultsSurvey(slug), questionId, query);
+}
+
+/** Textos para o administrador (`GET /api/v1/surveys/{id}/questions/{id}/texts`). */
+export async function getAdminTexts(
+  adminId: string,
+  surveyId: string,
+  questionId: string,
+  query: unknown,
+) {
+  return textsOf(await loadAdminResultsSurvey(adminId, surveyId), questionId, query);
+}
+
+// ---- Tabela individual e CSV (só administrador, RN-23) ----
+
+export type ResponseColumn = { questionId: string; title: string; archived: boolean };
+
+/** Colunas na ordem do painel: ativas primeiro, removidas no fim. */
+function columnsOf(survey: ResultsSurveyRecord): ResponseColumn[] {
+  return [
+    ...survey.questions.filter((q) => !q.archivedAt),
+    ...survey.questions.filter((q) => q.archivedAt),
+  ].map((q) => ({ questionId: q.id, title: q.title, archived: q.archivedAt !== null }));
+}
+
+/** Texto de cada pergunta num envio; opções múltiplas unidas por "; " (RF-13). */
+function cellsOf(row: ResponseRow): Record<string, string> {
+  return Object.fromEntries(row.answers.map((a) => [a.questionId, a.text ?? a.labels.join("; ")]));
+}
+
+export type ResponsesTable = Page<{
+  id: string;
+  submittedAt: Date;
+  cells: Record<string, string>;
+}> & {
+  columns: ResponseColumn[];
+  asOf: Date;
+};
+
+/** Tabela de respostas (RF-13, `GET /api/v1/surveys/{id}/responses`). */
+export async function getResponsesTable(
+  adminId: string,
+  surveyId: string,
+  query: unknown,
+  now = new Date(),
+): Promise<ResponsesTable> {
+  const survey = await loadAdminResultsSurvey(adminId, surveyId);
+  const { asOf: asOfParam, ...page } = responsesQuerySchema.parse(query);
+  const asOf = asOfParam ? new Date(asOfParam) : now;
+  const { data, total } = await findResponsePage(survey.id, asOf, {
+    skip: skipFor(page),
+    take: page.pageSize,
+  });
+  return {
+    columns: columnsOf(survey),
+    data: data.map((row) => ({ id: row.id, submittedAt: row.submittedAt, cells: cellsOf(row) })),
+    total,
+    asOf,
+    ...page,
+  };
+}
+
+/**
+ * CSV com todas as respostas (RF-15): "Resposta" e "Enviada em" (horário de Brasília)
+ * mais uma coluna por pergunta. Sai em pedaços, um lote de respostas por vez.
+ */
+export async function exportResponses(
+  adminId: string,
+  surveyId: string,
+  query: unknown,
+  now = new Date(),
+): Promise<{ filename: string; chunks: AsyncIterable<string> }> {
+  const { format } = exportQuerySchema.parse(query);
+  if (format !== "csv") {
+    throw new AppError("UNSUPPORTED_FORMAT", "Formato não suportado. Use csv.", [
+      { path: "format", message: "Use csv." },
+    ]);
+  }
+  const survey = await loadAdminResultsSurvey(adminId, surveyId);
+  const columns = columnsOf(survey);
+
+  async function* chunks() {
+    yield CSV_BOM +
+      csvRow([
+        "Resposta",
+        "Enviada em",
+        ...columns.map((c) => (c.archived ? `${c.title} (removida)` : c.title)),
+      ]);
+    for await (const batch of iterateResponses(survey.id)) {
+      yield batch
+        .map((row) => {
+          const cells = cellsOf(row);
+          return csvRow([
+            row.id,
+            formatDateTime(row.submittedAt),
+            ...columns.map((c) => cells[c.questionId] ?? ""),
+          ]);
+        })
+        .join("");
+    }
+  }
+
+  return { filename: `pesquisa-${survey.slug}-${todayIso(now)}.csv`, chunks: chunks() };
 }

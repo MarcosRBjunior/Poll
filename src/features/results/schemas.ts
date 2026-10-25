@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { APP_TIME_ZONE } from "@/lib/format";
 import { pageQuerySchema } from "@/lib/pagination";
 
 /** Fuso em que o dia vira: respostas por dia e filtro de período (decisão da F5). */
-export const RESULTS_TIME_ZONE = "America/Sao_Paulo";
+export const RESULTS_TIME_ZONE = APP_TIME_ZONE;
 
 /** Período opcional do painel (RF-12): datas AAAA-MM-DD no fuso acima, fim incluído. */
 export const periodSchema = z

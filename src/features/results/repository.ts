@@ -112,3 +112,106 @@ export async function countAnswers(surveyId: string, period: Period): Promise<An
   }
   return counts;
 }
+
+export type TextRow = { text: string; submittedAt: Date };
+
+/** Textos de uma pergunta, do mais recente para o mais antigo, com o total. */
+export async function findTexts(
+  surveyId: string,
+  questionId: string,
+  page: { skip: number; take: number },
+): Promise<{ data: TextRow[]; total: number }> {
+  const where = { questionId, response: { surveyId }, textValue: { not: null } };
+  const [rows, total] = await Promise.all([
+    getDb().answer.findMany({
+      where,
+      orderBy: [{ response: { submittedAt: "desc" } }, { id: "desc" }],
+      skip: page.skip,
+      take: page.take,
+      select: { textValue: true, response: { select: { submittedAt: true } } },
+    }),
+    getDb().answer.count({ where }),
+  ]);
+  return {
+    data: rows.map((r) => ({ text: r.textValue!, submittedAt: r.response.submittedAt })),
+    total,
+  };
+}
+
+// Uma linha da tabela individual: as respostas de um envio, com os rótulos das opções.
+const responseRowSelect = {
+  id: true,
+  submittedAt: true,
+  answers: {
+    select: {
+      questionId: true,
+      textValue: true,
+      selections: {
+        orderBy: { option: { position: "asc" } },
+        select: { option: { select: { label: true } } },
+      },
+    },
+  },
+} satisfies Prisma.SurveyResponseSelect;
+
+export type ResponseRow = {
+  id: string;
+  submittedAt: Date;
+  answers: { questionId: string; text: string | null; labels: string[] }[];
+};
+
+function toResponseRow(row: Prisma.SurveyResponseGetPayload<{ select: typeof responseRowSelect }>) {
+  return {
+    id: row.id,
+    submittedAt: row.submittedAt,
+    answers: row.answers.map((a) => ({
+      questionId: a.questionId,
+      text: a.textValue,
+      labels: a.selections.map((s) => s.option.label),
+    })),
+  };
+}
+
+// Mais recente primeiro; o id desempata envios no mesmo instante.
+const newestFirst = [
+  { submittedAt: "desc" },
+  { id: "desc" },
+] satisfies Prisma.SurveyResponseOrderByWithRelationInput[];
+
+/** Uma página da tabela, só com envios até `asOf` (paginação estável, RF-13). */
+export async function findResponsePage(
+  surveyId: string,
+  asOf: Date,
+  page: { skip: number; take: number },
+): Promise<{ data: ResponseRow[]; total: number }> {
+  const where = { surveyId, submittedAt: { lte: asOf } };
+  const [rows, total] = await Promise.all([
+    getDb().surveyResponse.findMany({
+      where,
+      orderBy: newestFirst,
+      skip: page.skip,
+      take: page.take,
+      select: responseRowSelect,
+    }),
+    getDb().surveyResponse.count({ where }),
+  ]);
+  return { data: rows.map(toResponseRow), total };
+}
+
+/** Todas as respostas em lotes, para o CSV não montar tudo na memória de uma vez (RF-15). */
+export async function* iterateResponses(surveyId: string, batchSize = 500) {
+  let cursor: string | undefined;
+  while (true) {
+    const rows = await getDb().surveyResponse.findMany({
+      where: { surveyId },
+      orderBy: newestFirst,
+      take: batchSize,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: responseRowSelect,
+    });
+    if (rows.length === 0) return;
+    yield rows.map(toResponseRow);
+    if (rows.length < batchSize) return;
+    cursor = rows.at(-1)!.id;
+  }
+}

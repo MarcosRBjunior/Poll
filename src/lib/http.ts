@@ -60,6 +60,11 @@ export function errorResponse(error: unknown, requestId: string): Response {
   return body("INTERNAL_ERROR", "Erro inesperado.", [], requestId);
 }
 
+/** Parâmetros da query string como objeto, para o serviço validar com Zod. */
+export function searchQuery(request: Request): Record<string, string> {
+  return Object.fromEntries(new URL(request.url).searchParams);
+}
+
 export type RouteMeta = { requestId: string };
 
 type Handler<C> = (request: Request, context: C, meta: RouteMeta) => Response | Promise<Response>;
