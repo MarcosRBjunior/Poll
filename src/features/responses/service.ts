@@ -117,7 +117,12 @@ export async function submitResponse(input: SubmitInput): Promise<SubmitResult> 
   }
 
   const respondentKey = keyedHash(input.respondentToken);
-  if (await hasRespondentResponse(survey.id, respondentKey)) throw alreadyResponded();
+  if (await hasRespondentResponse(survey.id, respondentKey)) {
+    // Repetição simultânea: a outra requisição gravou entre a checagem da chave e esta.
+    const repeated = await findResponseByIdempotencyKey(body.idempotencyKey);
+    if (repeated?.surveyId === survey.id) return { ...repeated, created: false };
+    throw alreadyResponded();
+  }
 
   const issues = checkAnswers(survey.questions, body.answers);
   if (issues.length) rejectIssues(issues);
@@ -138,12 +143,13 @@ export async function submitResponse(input: SubmitInput): Promise<SubmitResult> 
     });
     return { ...saved, created: true };
   } catch (error) {
-    // Dois envios simultâneos: o banco decide quem chegou primeiro (UNIQUE).
+    // Dois envios simultâneos: o banco decide quem chegou primeiro (UNIQUE). Com a mesma
+    // chave e o mesmo cookie, os dois UNIQUE são violados e o Postgres pode acusar qualquer
+    // um deles: se a chave já foi gravada nesta pesquisa, é repetição (200), não 409.
     const conflict = responseConflict(error);
-    if (conflict === "idempotencyKey") {
-      const winner = await findResponseByIdempotencyKey(body.idempotencyKey);
-      if (winner) return { ...winner, created: false };
-    }
+    if (conflict === null) throw error;
+    const winner = await findResponseByIdempotencyKey(body.idempotencyKey);
+    if (winner?.surveyId === survey.id) return { ...winner, created: false };
     if (conflict === "respondent") throw alreadyResponded();
     throw error;
   }
