@@ -3,7 +3,7 @@
 App web full-stack: o administrador cria pesquisas sem código, qualquer pessoa responde por link e os resultados viram gráficos, números e um painel de tendências por grupo de pesquisas. Tema inicial: ferramentas JavaScript favoritas e entretenimento.
 
 - Especificação completa: `docs/spec.md`. Os IDs citados aqui (RF, RN, US, D) estão definidos lá.
-- Fase atual: **5 — Resultados**. Fase 4 concluída em 24/10/2026 (produção: https://poll-chi-six.vercel.app).
+- Fase atual: **6 — Construtor de pesquisas**. Fase 5 concluída em 25/10/2026 com a release `v0.1.0` (produção: https://poll-chi-six.vercel.app).
 
 ## Como trabalhar aqui
 
