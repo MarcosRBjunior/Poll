@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Gráficos (Chart.js lê estas variáveis): série única, grade e textos discretos. */
+  --chart-series: #2a78d6;
+  --chart-grid: #e4e4e7;
+  --chart-text: #52525b;
 }
 
 @theme inline {
@@ -16,6 +20,9 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --chart-series: #3987e5;
+    --chart-grid: #27272a;
+    --chart-text: #a1a1aa;
   }
 }
 
