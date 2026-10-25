@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache, Suspense } from "react";
 import { SurveyForm } from "@/components/questions/survey-form";
@@ -59,11 +60,17 @@ async function SurveyContent({ params }: Pick<PageProps<"/s/[slug]">, "params">)
 
       {survey.status === "CLOSED" ? (
         <p role="status" className="rounded-md border border-zinc-300 p-4 dark:border-zinc-700">
-          Esta pesquisa não aceita mais respostas.
+          Esta pesquisa não aceita mais respostas.{" "}
+          <Link href={`/s/${survey.slug}/results`} className="underline">
+            Ver resultados
+          </Link>
         </p>
       ) : alreadyResponded ? (
         <p role="status" className="rounded-md border border-zinc-300 p-4 dark:border-zinc-700">
-          Você já respondeu esta pesquisa. Obrigado pela participação!
+          Você já respondeu esta pesquisa. Obrigado pela participação!{" "}
+          <Link href={`/s/${survey.slug}/results`} className="underline">
+            Ver resultados
+          </Link>
         </p>
       ) : (
         <SurveyForm slug={survey.slug} questions={survey.questions} />

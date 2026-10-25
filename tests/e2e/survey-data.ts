@@ -15,18 +15,21 @@ export async function withDb<T>(fn: (db: Client) => Promise<T>): Promise<T> {
   }
 }
 
-export async function createE2ESurvey(status: Status = "PUBLISHED") {
-  const ownerId = randomUUID();
+/** `ownerId`: dono já existente (ex.: o administrador logado); sem ele, cria um dono temporário. */
+export async function createE2ESurvey(status: Status = "PUBLISHED", existingOwnerId?: string) {
+  const ownerId = existingOwnerId ?? randomUUID();
   const surveyId = `e2e-${randomUUID()}`;
   const slug = `e2e-${randomUUID().slice(0, 8)}`;
   const id = () => `e2e-${randomUUID()}`;
   const q = { framework: id(), tools: id(), project: id(), comment: id() };
 
   await withDb(async (db) => {
-    await db.query(`INSERT INTO "User" (id, email, role) VALUES ($1, $2, 'ADMIN')`, [
-      ownerId,
-      `${ownerId}@e2e.test`,
-    ]);
+    if (!existingOwnerId) {
+      await db.query(`INSERT INTO "User" (id, email, role) VALUES ($1, $2, 'ADMIN')`, [
+        ownerId,
+        `${ownerId}@e2e.test`,
+      ]);
+    }
     await db.query(
       `INSERT INTO "Survey" (id, "ownerId", title, description, slug, status, "publishedAt", "updatedAt")
        VALUES ($1, $2, 'Ferramentas JavaScript (E2E)', 'Pesquisa criada pelo teste.', $3, $4, now(), now())`,
@@ -70,6 +73,7 @@ export async function createE2ESurvey(status: Status = "PUBLISHED") {
   });
 
   return {
+    id: surveyId,
     slug,
     /** Apaga a pesquisa (respostas e perguntas vão em cascata) e o dono. */
     cleanup: () =>
@@ -79,7 +83,7 @@ export async function createE2ESurvey(status: Status = "PUBLISHED") {
           [surveyId],
         );
         await db.query(`DELETE FROM "Survey" WHERE id = $1`, [surveyId]);
-        await db.query(`DELETE FROM "User" WHERE id = $1`, [ownerId]);
+        if (!existingOwnerId) await db.query(`DELETE FROM "User" WHERE id = $1`, [ownerId]);
       }),
   };
 }
