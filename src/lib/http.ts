@@ -111,3 +111,20 @@ export function assertSameOrigin(request: Request): void {
     throw new AppError("FORBIDDEN_ORIGIN", "Origem não permitida.");
   }
 }
+
+/** Corpo JSON até `maxBytes`: sem JSON → 400, acima do limite → 413, malformado → 400. */
+export async function readJson(request: Request, maxBytes: number): Promise<unknown> {
+  if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
+    throw new AppError("BAD_REQUEST", "Envie o corpo como application/json.");
+  }
+  const tooLarge = () =>
+    new AppError("PAYLOAD_TOO_LARGE", `O envio passou do limite de ${maxBytes / 1024} KB.`);
+  if (Number(request.headers.get("content-length") ?? 0) > maxBytes) throw tooLarge();
+  const text = await request.text();
+  if (new TextEncoder().encode(text).byteLength > maxBytes) throw tooLarge();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new AppError("BAD_REQUEST", "JSON malformado.");
+  }
+}

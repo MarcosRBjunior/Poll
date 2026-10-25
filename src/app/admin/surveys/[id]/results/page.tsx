@@ -79,6 +79,9 @@ async function AdminResults({ params, searchParams }: PageProps<"/admin/surveys/
               </Link>
             </>
           )}
+          <Link href={`/admin/surveys/${id}/edit`} className="underline">
+            Editar
+          </Link>
           <a
             href={`/api/v1/surveys/${id}/export?format=csv`}
             download

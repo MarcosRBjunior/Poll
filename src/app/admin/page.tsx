@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
 export const metadata: Metadata = { title: "Administração — Poll" };
@@ -12,6 +13,13 @@ export default function AdminPage() {
         <SignOutButton />
       </div>
       <p className="text-zinc-700 dark:text-zinc-300">Você entrou como administrador.</p>
+      {/* Provisório até a lista de pesquisas (T05, F7). */}
+      <Link
+        href="/admin/surveys/new"
+        className="self-start rounded-md bg-zinc-900 px-4 py-2 font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+      >
+        Nova pesquisa
+      </Link>
     </main>
   );
 }
