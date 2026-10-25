@@ -385,7 +385,7 @@ Cada requisito traz a fase em que é implementado. Critérios de aceite numerado
 - **Objetivo:** levar os dados para fora do sistema por um botão em T07.
 - **Entrada:** id da pesquisa e `format=csv`.
 - **Processamento:** gerar no servidor um CSV com todas as respostas, uma linha por resposta e uma coluna por pergunta; UTF-8 com BOM e separador `;`.
-- **Saída:** arquivo `pesquisa-{slug}-{AAAA-MM-DD}.csv`.
+- **Saída:** arquivo `pesquisa-{slug}-{AAAA-MM-DD}.csv`, com as colunas "Resposta" (id do envio) e "Enviada em" (`DD/MM/AAAA HH:MM`, horário de Brasília) antes das perguntas; perguntas removidas vêm no fim com "(removida)" (decisão da F5).
 - **Regras:** RN-12, RN-18.
 - **Permissões:** administrador.
 - **Critérios de aceite:**
@@ -1136,7 +1136,7 @@ No `PUT`, o serviço compara com o banco: item sem `id` é criado; item ausente 
 | Método e rota                                           | Objetivo                 | Entrada            | Resposta                                                                                                     | Códigos                                 | Fase |
 | ------------------------------------------------------- | ------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------- | ---- |
 | `GET /api/v1/surveys/{id}/results`                      | Painel (RF-12)           | `from?`, `to?`     | Ver abaixo                                                                                                   | 200; 401, 404, 422                      | F5   |
-| `GET /api/v1/surveys/{id}/responses`                    | Tabela (RF-13)           | `page`, `pageSize` | `columns[]` (`questionId`, `title`) e `data[]` com `id`, `submittedAt` e `cells` por pergunta                | 200; 401, 404                           | F5   |
+| `GET /api/v1/surveys/{id}/responses`                    | Tabela (RF-13)           | `page`, `pageSize`, `asOf?` | `columns[]` (`questionId`, `title`, `archived`), `data[]` com `id`, `submittedAt` e `cells` por pergunta, e `asOf` | 200; 401, 404, 422                      | F5   |
 | `GET /api/v1/surveys/{id}/questions/{questionId}/texts` | Textos paginados (RF-12) | `page`, `pageSize` | `data[]` com `text` e `submittedAt`                                                                          | 200; 401, 404                           | F5   |
 | `GET /api/v1/surveys/{id}/export`                       | Baixar (RF-15)           | `format=csv`       | `text/csv; charset=utf-8` com `Content-Disposition: attachment; filename="pesquisa-{slug}-{AAAA-MM-DD}.csv"` | 200; 401, 404, 422 `UNSUPPORTED_FORMAT` | F5   |
 
@@ -1171,6 +1171,9 @@ No `PUT`, o serviço compara com o banco: item sem `id` é criado; item ausente 
 - `percent` vai de 0 a 100, com uma casa decimal (RN-16).
 - `numeric` é `{ "mean", "median" }` só quando todas as opções ativas têm valor; senão `null`.
 - `textCount` é preenchido só em perguntas de texto; os textos vêm pela rota `texts`.
+- Média e mediana só em escolha única (decisão da F5); em múltipla escolha `numeric` é sempre `null`. Escolhas de opções removidas entram no cálculo se a opção tinha valor.
+- O dia de `perDay` e o filtro `from`/`to` (datas `AAAA-MM-DD`, fim incluído) usam o fuso `America/Sao_Paulo` (decisão da F5); os instantes continuam em ISO UTC. Dias sem resposta entre o primeiro e o último entram com zero.
+- `asOf` (tabela): instante devolvido na primeira página e repassado nas seguintes; só entram envios até ele, para uma resposta nova não duplicar linhas entre páginas (RF-13, critério 1).
 
 ### 8.6 Módulo grupos e tendências — administrador
 
