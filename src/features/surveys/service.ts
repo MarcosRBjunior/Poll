@@ -1,7 +1,13 @@
 import { AppError, type ErrorDetail } from "@/lib/errors";
+import { skipFor, type Page } from "@/lib/pagination";
 import { slugify } from "@/lib/slug";
 import {
   applySurveyUpdate,
+  changeStatus,
+  findOwnGroups,
+  findSurveyPage,
+  softDeleteSurvey,
+  type SurveyListRow,
   findSlugsStartingWith,
   findSurveyForEdit,
   groupBelongsTo,
@@ -13,6 +19,7 @@ import {
 import {
   isChoiceType,
   surveyInputSchema,
+  surveyListQuerySchema,
   surveyUpdateSchema,
   type QuestionInput,
   type SurveyInput,
@@ -289,4 +296,105 @@ function buildPlan(
     relabelOptionIds,
     questions,
   };
+}
+
+// ---- Status (RF-11, RN-15) ----
+
+const invalidTransition = (message: string) => new AppError("INVALID_TRANSITION", message);
+
+/**
+ * Revalida a pesquisa inteira antes de publicar (RN-01, RN-02). Os caminhos seguem a
+ * ordem das perguntas ativas, a mesma do construtor, para o erro aparecer no campo.
+ */
+function publishProblems(survey: EditSurveyRecord): ErrorDetail[] {
+  const problems: ErrorDetail[] = [];
+  if (survey.title.trim().length < 3) {
+    problems.push({ path: "title", message: "Use pelo menos 3 caracteres no título." });
+  }
+  const active = survey.questions.filter((q) => !q.archivedAt);
+  if (active.length === 0) {
+    problems.push({ path: "questions", message: "Adicione pelo menos uma pergunta." });
+  }
+  active.forEach((q, index) => {
+    if (isChoiceType(q.type) && q.options.filter((o) => !o.archivedAt).length < 2) {
+      problems.push({
+        path: `questions.${index}.options`,
+        message: "Pergunta de escolha precisa de pelo menos 2 opções.",
+      });
+    }
+  });
+  return problems;
+}
+
+export type PublishResult = { status: "PUBLISHED"; publishedAt: Date; publicPath: string };
+
+/** Publicar (`POST /surveys/{id}/publish`): só rascunho; fixa o slug (RN-20). */
+export async function publishSurvey(adminId: string, surveyId: string): Promise<PublishResult> {
+  const survey = await loadOwnSurvey(adminId, surveyId);
+  if (survey.status !== "DRAFT") {
+    throw invalidTransition(
+      survey.status === "PUBLISHED"
+        ? "A pesquisa já está publicada."
+        : "Use reabrir para aceitar respostas de novo.",
+    );
+  }
+  const problems = publishProblems(survey);
+  if (problems.length) {
+    throw new AppError("NOT_PUBLISHABLE", "A pesquisa ainda não pode ser publicada.", problems);
+  }
+  const publishedAt = new Date();
+  if (!(await changeStatus(survey.id, ["DRAFT"], { status: "PUBLISHED", publishedAt }))) {
+    throw invalidTransition("O status da pesquisa mudou. Recarregue a página.");
+  }
+  return { status: "PUBLISHED", publishedAt, publicPath: `/s/${survey.slug}` };
+}
+
+/** Encerrar (`POST /surveys/{id}/close`): para de aceitar respostas (RN-04). */
+export async function closeSurvey(adminId: string, surveyId: string) {
+  const survey = await loadOwnSurvey(adminId, surveyId);
+  const closedAt = new Date();
+  if (
+    survey.status !== "PUBLISHED" ||
+    !(await changeStatus(survey.id, ["PUBLISHED"], { status: "CLOSED", closedAt }))
+  ) {
+    throw invalidTransition("Só uma pesquisa publicada pode ser encerrada.");
+  }
+  return { status: "CLOSED" as const, closedAt };
+}
+
+/** Reabrir (`POST /surveys/{id}/reopen`): volta a aceitar respostas no mesmo link. */
+export async function reopenSurvey(adminId: string, surveyId: string) {
+  const survey = await loadOwnSurvey(adminId, surveyId);
+  if (
+    survey.status !== "CLOSED" ||
+    !(await changeStatus(survey.id, ["CLOSED"], { status: "PUBLISHED", closedAt: null }))
+  ) {
+    throw invalidTransition("Só uma pesquisa encerrada pode ser reaberta.");
+  }
+  return { status: "PUBLISHED" as const };
+}
+
+/** Excluir (`DELETE /surveys/{id}`, RF-10): exclusão lógica; links públicos passam a 404. */
+export async function deleteSurvey(adminId: string, surveyId: string): Promise<void> {
+  await loadOwnSurvey(adminId, surveyId);
+  if (!(await softDeleteSurvey(surveyId))) throw notFound();
+}
+
+// ---- Lista (RF-08) ----
+
+/** `GET /api/v1/surveys`: pesquisas do administrador com filtros combinados. */
+export async function listSurveys(adminId: string, query: unknown): Promise<Page<SurveyListRow>> {
+  const { page, pageSize, ...filters } = surveyListQuerySchema.parse(query);
+  const { data, total } = await findSurveyPage({
+    ownerId: adminId,
+    ...filters,
+    skip: skipFor({ page, pageSize }),
+    take: pageSize,
+  });
+  return { data, total, page, pageSize };
+}
+
+/** Grupos para o filtro da lista. */
+export function listOwnGroups(adminId: string) {
+  return findOwnGroups(adminId);
 }

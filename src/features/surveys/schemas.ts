@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_OPTIONS, MAX_QUESTIONS, type QuestionType } from "@/features/responses/schemas";
+import { pageQuerySchema } from "@/lib/pagination";
 
 // SurveyInput (spec 8.4) escrito uma vez: o construtor (T06) e o serviço usam este schema.
 // Rascunho pode ficar incompleto (RF-05, critério 4): o mínimo de opções e de perguntas
@@ -197,3 +198,17 @@ export function newQuestion(type: QuestionType = "SINGLE_CHOICE"): QuestionFormV
 }
 
 export const newOption = (): OptionFormValues => ({ label: "", value: "" });
+
+// ---- Lista (T05) ----
+
+export const surveyStatuses = ["DRAFT", "PUBLISHED", "CLOSED"] as const;
+
+/** `GET /api/v1/surveys` (RF-08): filtros combináveis e paginação. */
+export const surveyListQuerySchema = pageQuerySchema(20).extend({
+  status: z.enum(surveyStatuses).optional(),
+  groupId: z.preprocess((v) => v || undefined, id.optional()),
+  q: z.preprocess(
+    (v) => (typeof v === "string" ? v.trim() || undefined : v),
+    z.string().max(120).optional(),
+  ),
+});
