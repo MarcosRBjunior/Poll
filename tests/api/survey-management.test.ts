@@ -31,7 +31,11 @@ function post(url: string, body?: unknown, method = "POST") {
   });
 }
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) });
-const action = (handler: typeof publish, name: string) => (id: string) =>
+type ActionHandler = (
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+) => Promise<Response>;
+const action = (handler: ActionHandler, name: string) => (id: string) =>
   handler(post(`${BASE}/${id}/${name}`), ctx(id));
 const doPublish = action(publish, "publish");
 const doClose = action(close, "close");
