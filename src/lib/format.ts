@@ -34,3 +34,11 @@ export function formatDay(isoDay: string, withYear = true) {
 
 /** Dia de hoje (AAAA-MM-DD) no fuso do app. */
 export const todayIso = (now = new Date()) => isoDayFormat.format(now);
+
+/**
+ * Início do dia de hoje no fuso do app. São Paulo não tem horário de verão desde 2019,
+ * então o deslocamento é fixo em -03:00.
+ */
+export function startOfTodayInAppZone(now = new Date()): Date {
+  return new Date(`${todayIso(now)}T00:00:00-03:00`);
+}

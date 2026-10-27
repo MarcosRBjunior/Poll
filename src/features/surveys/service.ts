@@ -15,12 +15,14 @@ import {
   groupBelongsTo,
   insertSurvey,
   isSlugConflict,
+  publishDraft,
+  RequestUnavailableError,
   type EditSurveyRecord,
   type SurveyUpdatePlan,
 } from "./repository";
 import {
   isChoiceType,
-  surveyInputSchema,
+  surveyCreateSchema,
   surveyListQuerySchema,
   surveyUpdateSchema,
   type QuestionInput,
@@ -148,7 +150,7 @@ const questionData = (q: QuestionInput, position: number) => ({
 
 /** Criar rascunho (`POST /api/v1/surveys`, RF-05). */
 export async function createSurvey(adminId: string, body: unknown): Promise<SurveyDetail> {
-  const input = surveyInputSchema.parse(body);
+  const { requestId, ...input } = surveyCreateSchema.parse(body);
   if (input.questions.some((q) => q.id || q.options.some((o) => o.id))) {
     throw new AppError("VALIDATION_ERROR", "Há campos inválidos.", [
       { path: "questions", message: "Pesquisa nova não tem itens existentes." },
@@ -156,20 +158,32 @@ export async function createSurvey(adminId: string, body: unknown): Promise<Surv
   }
   await assertGroup(adminId, input.groupId);
 
-  const id = await withSlugRetry(async () =>
-    insertSurvey({
-      ownerId: adminId,
-      title: input.title,
-      description: input.description,
-      groupId: input.groupId ?? null,
-      isListed: input.isListed,
-      slug: await availableSlug(input.title),
-      questions: input.questions.map((q, position) => ({
-        ...questionData(q, position),
-        options: q.options.map((o, i) => ({ label: o.label, value: o.value, position: i })),
-      })),
-    }),
-  );
+  let id: string;
+  try {
+    id = await withSlugRetry(async () =>
+      insertSurvey(
+        {
+          ownerId: adminId,
+          title: input.title,
+          description: input.description,
+          groupId: input.groupId ?? null,
+          isListed: input.isListed,
+          slug: await availableSlug(input.title),
+          questions: input.questions.map((q, position) => ({
+            ...questionData(q, position),
+            options: q.options.map((o, i) => ({ label: o.label, value: o.value, position: i })),
+          })),
+        },
+        requestId,
+      ),
+    );
+  } catch (error) {
+    if (!(error instanceof RequestUnavailableError)) throw error;
+    // RF-22: a solicitação precisa estar aberta e sem outra pesquisa ligada.
+    throw new AppError("INVALID_TRANSITION", "Esta solicitação não está mais aberta.", [
+      { path: "requestId", message: "A solicitação já foi atendida, recusada ou não existe." },
+    ]);
+  }
   return getSurveyDetail(adminId, id);
 }
 
@@ -345,7 +359,8 @@ export async function publishSurvey(adminId: string, surveyId: string): Promise<
     throw new AppError("NOT_PUBLISHABLE", "A pesquisa ainda não pode ser publicada.", problems);
   }
   const publishedAt = new Date();
-  if (!(await changeStatus(survey.id, ["DRAFT"], { status: "PUBLISHED", publishedAt }))) {
+  // Na mesma transação, a solicitação ligada vai a DONE (RN-22).
+  if (!(await publishDraft(survey.id, publishedAt))) {
     throw invalidTransition("O status da pesquisa mudou. Recarregue a página.");
   }
   return { status: "PUBLISHED", publishedAt, publicPath: `/s/${survey.slug}` };
