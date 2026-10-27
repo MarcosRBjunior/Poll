@@ -341,3 +341,40 @@ export function findOwnGroups(ownerId: string): Promise<{ id: string; name: stri
     select: { id: true, name: true },
   });
 }
+
+export type ListedSurvey = {
+  slug: string;
+  title: string;
+  description: string | null;
+  questionCount: number;
+};
+
+/**
+ * Vitrine (RF-20): publicadas, marcadas para a vitrine e não excluídas, da publicação mais
+ * recente para a mais antiga. Usa o índice parcial `survey_listed_idx`.
+ */
+export async function findListedSurveys(page: {
+  skip: number;
+  take: number;
+}): Promise<{ data: ListedSurvey[]; total: number }> {
+  const where = { status: "PUBLISHED", isListed: true, deletedAt: null } as const;
+  const [rows, total] = await Promise.all([
+    getDb().survey.findMany({
+      where,
+      orderBy: [{ publishedAt: "desc" }, { id: "desc" }],
+      skip: page.skip,
+      take: page.take,
+      select: {
+        slug: true,
+        title: true,
+        description: true,
+        _count: { select: { questions: { where: { archivedAt: null } } } },
+      },
+    }),
+    getDb().survey.count({ where }),
+  ]);
+  return {
+    total,
+    data: rows.map(({ _count, ...row }) => ({ ...row, questionCount: _count.questions })),
+  };
+}
