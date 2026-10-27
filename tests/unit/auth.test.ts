@@ -6,9 +6,9 @@ describe("afterLoginPath", () => {
     expect(afterLoginPath("/admin/surveys?page=2", "USER")).toBe("/admin/surveys?page=2");
   });
 
-  it("sem origem, manda o administrador para /admin e os demais para /", () => {
+  it("sem origem, manda o administrador para /admin e os demais para /requests", () => {
     expect(afterLoginPath(null, "ADMIN")).toBe("/admin");
-    expect(afterLoginPath(undefined, "USER")).toBe("/");
+    expect(afterLoginPath(undefined, "USER")).toBe("/requests");
   });
 
   it.each(["https://evil.example", "//evil.example", "/\\evil.example", "admin", ""])(

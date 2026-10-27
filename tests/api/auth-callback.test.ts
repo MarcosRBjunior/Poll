@@ -39,10 +39,10 @@ describe("GET /api/auth/callback", () => {
     expect(await db.user.findUnique({ where: { id } })).toMatchObject({ role: "ADMIN" });
   });
 
-  it("cria o usuário comum como USER e manda para /", async () => {
+  it("cria o usuário comum como USER e manda para /requests", async () => {
     const id = exchangeAs("pessoa@example.com");
     const response = await callback("code=abc");
-    expect(response.headers.get("location")).toBe("http://localhost/");
+    expect(response.headers.get("location")).toBe("http://localhost/requests");
     expect(await db.user.findUnique({ where: { id } })).toMatchObject({ role: "USER" });
   });
 
@@ -55,7 +55,7 @@ describe("GET /api/auth/callback", () => {
   it("ignora next externo", async () => {
     exchangeAs("pessoa@example.com");
     const response = await callback(`code=abc&next=${encodeURIComponent("//evil.example")}`);
-    expect(response.headers.get("location")).toBe("http://localhost/");
+    expect(response.headers.get("location")).toBe("http://localhost/requests");
   });
 
   it("sem code volta para /login com erro", async () => {
