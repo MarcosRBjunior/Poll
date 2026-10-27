@@ -2,20 +2,10 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { hasTestSupabase, testSupabase } from "../fixtures/supabase-test-project";
 import { loginAs } from "./session";
-import { withDb } from "./survey-data";
+import { deleteSurvey, withDb } from "./survey-data";
 
 const question = (page: Page, n: number) =>
   page.getByRole("article", { name: `Pergunta ${n}`, exact: true });
-
-async function deleteSurvey(id: string) {
-  await withDb(async (db) => {
-    await db.query(
-      `DELETE FROM "Answer" WHERE "responseId" IN (SELECT id FROM "SurveyResponse" WHERE "surveyId" = $1)`,
-      [id],
-    );
-    await db.query(`DELETE FROM "Survey" WHERE id = $1`, [id]);
-  });
-}
 
 test.describe("construtor de pesquisas (T06)", () => {
   test.skip(!hasTestSupabase, "sem credenciais do projeto Supabase de teste");
