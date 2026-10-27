@@ -43,6 +43,14 @@ export async function hasRespondentResponse(surveyId: string, respondentKey: str
   return found !== null;
 }
 
+export async function hasUserResponse(surveyId: string, userId: string) {
+  const found = await getDb().surveyResponse.findUnique({
+    where: { surveyId_userId: { surveyId, userId } },
+    select: { id: true },
+  });
+  return found !== null;
+}
+
 export type ResponseRecord = { id: string; surveyId: string; submittedAt: Date };
 
 export function findResponseByIdempotencyKey(
@@ -57,6 +65,8 @@ export function findResponseByIdempotencyKey(
 export type NewResponse = {
   surveyId: string;
   respondentKey: string;
+  /** Conta de quem respondeu, quando entrou (D-02). */
+  userId?: string | null;
   idempotencyKey: string;
   answers: { questionId: string; text?: string; optionIds?: string[] }[];
 };
@@ -70,6 +80,7 @@ export function insertResponse(data: NewResponse): Promise<ResponseRecord> {
     data: {
       surveyId: data.surveyId,
       respondentKey: data.respondentKey,
+      userId: data.userId ?? null,
       idempotencyKey: data.idempotencyKey,
       answers: {
         create: data.answers.map((answer) => ({
@@ -84,12 +95,13 @@ export function insertResponse(data: NewResponse): Promise<ResponseRecord> {
 }
 
 /** Qual UNIQUE de SurveyResponse um envio concorrente violou, se foi o caso. */
-export function responseConflict(error: unknown): "idempotencyKey" | "respondent" | null {
+export function responseConflict(error: unknown): "idempotencyKey" | "respondent" | "user" | null {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
     return null;
   }
   const text = JSON.stringify(error.meta ?? {});
   if (text.includes("idempotencyKey")) return "idempotencyKey";
   if (text.includes("respondentKey")) return "respondent";
+  if (text.includes("userId")) return "user";
   return null;
 }

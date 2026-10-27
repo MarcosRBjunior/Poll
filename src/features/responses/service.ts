@@ -5,6 +5,7 @@ import {
   findResponseByIdempotencyKey,
   findSurveyBySlug,
   hasRespondentResponse,
+  hasUserResponse,
   insertResponse,
   responseConflict,
   type SurveyRecord,
@@ -44,13 +45,29 @@ export async function getPublicSurvey(slug: string): Promise<PublicSurvey> {
   return toPublic(await loadVisibleSurvey(slug));
 }
 
-/** Pesquisa para a página T02, com o aviso de "já respondeu" pelo cookie (RN-14). */
-export async function getSurveyForRespondent(slug: string, respondentToken: string | undefined) {
+/**
+ * Já respondeu (RN-14): pela conta, com login, ou por este navegador, pelo cookie.
+ * Com login valem os dois (decisão da F7): quem respondeu sem conta não repete depois de entrar.
+ */
+async function hasResponded(surveyId: string, respondentKey: string | undefined, userId?: string) {
+  if (userId && (await hasUserResponse(surveyId, userId))) return true;
+  return respondentKey !== undefined && hasRespondentResponse(surveyId, respondentKey);
+}
+
+/** Pesquisa para a página T02, com o aviso de "já respondeu" (RN-14). */
+export async function getSurveyForRespondent(
+  slug: string,
+  respondentToken: string | undefined,
+  userId?: string,
+) {
   const survey = await loadVisibleSurvey(slug);
   const alreadyResponded =
-    survey.status === "PUBLISHED" && respondentToken !== undefined
-      ? await hasRespondentResponse(survey.id, keyedHash(respondentToken))
-      : false;
+    survey.status === "PUBLISHED" &&
+    (await hasResponded(
+      survey.id,
+      respondentToken === undefined ? undefined : keyedHash(respondentToken),
+      userId,
+    ));
   return { survey: toPublic(survey), alreadyResponded };
 }
 
@@ -59,6 +76,8 @@ export type SubmitInput = {
   body: unknown;
   respondentToken: string;
   ip: string;
+  /** Conta da sessão, quando o respondente entrou (D-02, US-4.3). */
+  userId?: string;
 };
 
 export type SubmitResult = { id: string; submittedAt: Date; created: boolean };
@@ -117,7 +136,7 @@ export async function submitResponse(input: SubmitInput): Promise<SubmitResult> 
   }
 
   const respondentKey = keyedHash(input.respondentToken);
-  if (await hasRespondentResponse(survey.id, respondentKey)) {
+  if (await hasResponded(survey.id, respondentKey, input.userId)) {
     // Repetição simultânea: a outra requisição gravou entre a checagem da chave e esta.
     const repeated = await findResponseByIdempotencyKey(body.idempotencyKey);
     if (repeated?.surveyId === survey.id) return { ...repeated, created: false };
@@ -131,6 +150,7 @@ export async function submitResponse(input: SubmitInput): Promise<SubmitResult> 
     const saved = await insertResponse({
       surveyId: survey.id,
       respondentKey,
+      userId: input.userId ?? null,
       idempotencyKey: body.idempotencyKey,
       // Pergunta opcional em branco não vira Answer (RN-07: vazio é não respondida).
       answers: body.answers
@@ -150,7 +170,7 @@ export async function submitResponse(input: SubmitInput): Promise<SubmitResult> 
     if (conflict === null) throw error;
     const winner = await findResponseByIdempotencyKey(body.idempotencyKey);
     if (winner?.surveyId === survey.id) return { ...winner, created: false };
-    if (conflict === "respondent") throw alreadyResponded();
+    if (conflict === "respondent" || conflict === "user") throw alreadyResponded();
     throw error;
   }
 }

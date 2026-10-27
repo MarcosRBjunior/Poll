@@ -1,12 +1,14 @@
 import { AppError, type ErrorDetail } from "@/lib/errors";
-import { skipFor, type Page } from "@/lib/pagination";
+import { pageQuerySchema, skipFor, type Page } from "@/lib/pagination";
 import { slugify } from "@/lib/slug";
 import {
   applySurveyUpdate,
   changeStatus,
+  findListedSurveys,
   findOwnGroups,
   findSurveyPage,
   softDeleteSurvey,
+  type ListedSurvey,
   type SurveyListRow,
   findSlugsStartingWith,
   findSurveyForEdit,
@@ -397,4 +399,15 @@ export async function listSurveys(adminId: string, query: unknown): Promise<Page
 /** Grupos para o filtro da lista. */
 export function listOwnGroups(adminId: string) {
   return findOwnGroups(adminId);
+}
+
+// ---- Vitrine (RF-20) ----
+
+export const SHOWCASE_PAGE_SIZE = 12;
+
+/** `GET /api/v1/public/surveys`: pesquisas abertas da página inicial (T01). */
+export async function listPublicSurveys(query: unknown): Promise<Page<ListedSurvey>> {
+  const page = pageQuerySchema(SHOWCASE_PAGE_SIZE).parse(query);
+  const { data, total } = await findListedSurveys({ skip: skipFor(page), take: page.pageSize });
+  return { data, total, ...page };
 }

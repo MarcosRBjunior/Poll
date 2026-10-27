@@ -5,14 +5,21 @@ import { notFound } from "next/navigation";
 import { cache, Suspense } from "react";
 import { SurveyForm } from "@/components/questions/survey-form";
 import { getSurveyForRespondent } from "@/features/responses/service";
+import { getCurrentUser } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { isRespondentToken, RESPONDENT_COOKIE } from "@/lib/respondent";
 
 // Uma busca por requisição, dividida entre o título da aba e a página.
 const loadSurvey = cache(async (slug: string) => {
-  const token = (await cookies()).get(RESPONDENT_COOKIE)?.value;
+  const [cookieStore, user] = await Promise.all([cookies(), getCurrentUser()]);
+  const token = cookieStore.get(RESPONDENT_COOKIE)?.value;
   try {
-    return await getSurveyForRespondent(slug, isRespondentToken(token) ? token : undefined);
+    const found = await getSurveyForRespondent(
+      slug,
+      isRespondentToken(token) ? token : undefined,
+      user?.id,
+    );
+    return { ...found, signedIn: user !== null };
   } catch (error) {
     if (error instanceof AppError && error.code === "NOT_FOUND") return null;
     throw error;
@@ -39,7 +46,7 @@ async function SurveyContent({ params }: Pick<PageProps<"/s/[slug]">, "params">)
   const { slug } = await params;
   const found = await loadSurvey(slug);
   if (!found) notFound();
-  const { survey, alreadyResponded } = found;
+  const { survey, alreadyResponded, signedIn } = found;
 
   return (
     <>
@@ -73,7 +80,25 @@ async function SurveyContent({ params }: Pick<PageProps<"/s/[slug]">, "params">)
           </Link>
         </p>
       ) : (
-        <SurveyForm slug={survey.slug} questions={survey.questions} />
+        <>
+          {/* Login opcional (D-02): com conta, a mesma pessoa não responde de novo em outro navegador. */}
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            {signedIn ? (
+              "Você está respondendo com a sua conta."
+            ) : (
+              <>
+                Responder é anônimo.{" "}
+                <Link
+                  href={`/login?next=${encodeURIComponent(`/s/${survey.slug}`)}`}
+                  className="underline"
+                >
+                  Entrar para responder com a sua conta
+                </Link>
+              </>
+            )}
+          </p>
+          <SurveyForm slug={survey.slug} questions={survey.questions} />
+        </>
       )}
     </>
   );
