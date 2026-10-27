@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { MAX_BODY_BYTES } from "@/features/responses/schemas";
 import { submitResponse } from "@/features/responses/service";
+import { getCurrentUser } from "@/lib/auth";
 import { assertSameOrigin, json, readJson, withRoute } from "@/lib/http";
 import {
   clientIp,
@@ -25,11 +26,14 @@ export const POST = withRoute<RouteContext<"/api/v1/public/surveys/[slug]/respon
       cookieStore.set(RESPONDENT_COOKIE, token, respondentCookieOptions);
     }
 
+    // Login é opcional (D-02); com sessão, o envio grava a conta (US-4.3).
+    const user = await getCurrentUser();
     const result = await submitResponse({
       slug,
       body,
       respondentToken: token,
       ip: clientIp(request),
+      userId: user?.id,
     });
     return json(
       { id: result.id, submittedAt: result.submittedAt.toISOString() },
