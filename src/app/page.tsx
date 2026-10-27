@@ -12,6 +12,12 @@ export default function Home({ searchParams }: PageProps<"/">) {
         <p className="text-zinc-700 dark:text-zinc-300">
           Responda por link e veja os resultados em gráficos.
         </p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Quer saber outra coisa?{" "}
+          <Link href="/requests/new" className="underline">
+            Pedir uma pesquisa
+          </Link>
+        </p>
       </header>
       <Suspense fallback={<ShowcaseSkeleton />}>
         <Showcase searchParams={searchParams} />
