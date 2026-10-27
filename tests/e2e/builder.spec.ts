@@ -32,7 +32,7 @@ test.describe("construtor de pesquisas (T06)", () => {
     await expect(page.getByText("Adicione a primeira pergunta.")).toBeVisible();
 
     // RF-05 (3): o erro aparece junto do campo.
-    await page.getByRole("button", { name: "Salvar" }).click();
+    await page.getByRole("button", { name: "Salvar", exact: true }).click();
     await expect(page.getByRole("textbox", { name: "Título" })).toHaveAccessibleDescription(
       "Use pelo menos 3 caracteres.",
     );
@@ -64,7 +64,7 @@ test.describe("construtor de pesquisas (T06)", () => {
 
     // RF-06 (3): limite incoerente impede salvar.
     await question(page, 3).getByLabel("Máximo de opções (opcional)", { exact: true }).fill("5");
-    await page.getByRole("button", { name: "Salvar" }).click();
+    await page.getByRole("button", { name: "Salvar", exact: true }).click();
     await expect(
       question(page, 3).getByText("O máximo não pode passar do número de opções."),
     ).toBeVisible();
@@ -95,7 +95,7 @@ test.describe("construtor de pesquisas (T06)", () => {
     const { violations } = await new AxeBuilder({ page }).analyze();
     expect(violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
 
-    await page.getByRole("button", { name: "Salvar" }).click();
+    await page.getByRole("button", { name: "Salvar", exact: true }).click();
     await expect(page).toHaveURL(/\/admin\/surveys\/[^/]+\/edit$/);
     const surveyId = page.url().split("/").at(-2)!;
     try {
@@ -126,7 +126,7 @@ test.describe("construtor de pesquisas (T06)", () => {
       await question(page, 1)
         .getByLabel("Enunciado", { exact: true })
         .fill("Qual framework você mais usa?");
-      await page.getByRole("button", { name: "Salvar" }).click();
+      await page.getByRole("button", { name: "Salvar", exact: true }).click();
       await expect(page.getByText("Alterações salvas.")).toBeVisible();
 
       // RF-09 (4): outra aba com versão velha recebe o diálogo de recarregar.
@@ -137,11 +137,11 @@ test.describe("construtor de pesquisas (T06)", () => {
       await question(page, 2)
         .getByLabel("Enunciado", { exact: true })
         .fill("Quais ferramentas você usa?");
-      await page.getByRole("button", { name: "Salvar" }).click();
+      await page.getByRole("button", { name: "Salvar", exact: true }).click();
       await expect(page.getByText("Alterações salvas.")).toBeVisible();
 
       await question(stale, 3).getByLabel("Enunciado", { exact: true }).fill("Nome do seu projeto");
-      await stale.getByRole("button", { name: "Salvar" }).click();
+      await stale.getByRole("button", { name: "Salvar", exact: true }).click();
       await expect(stale.getByRole("alertdialog", { name: "Esta pesquisa mudou" })).toBeVisible();
       await other.close();
     } finally {

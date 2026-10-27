@@ -230,3 +230,114 @@ export function isSlugConflict(error: unknown): boolean {
     JSON.stringify(error.meta ?? {}).includes("slug")
   );
 }
+
+type SurveyStatus = EditSurveyRecord["status"];
+
+/**
+ * Muda o status só se ele ainda for um dos `from` (RN-15). Devolve `false` se outra
+ * requisição mudou antes: o serviço responde 409 em vez de sobrescrever.
+ */
+export async function changeStatus(
+  surveyId: string,
+  from: SurveyStatus[],
+  data: { status: SurveyStatus; publishedAt?: Date; closedAt?: Date | null },
+): Promise<boolean> {
+  const { count } = await getDb().survey.updateMany({
+    where: { id: surveyId, status: { in: from }, deletedAt: null },
+    data,
+  });
+  return count === 1;
+}
+
+/** Exclusão lógica (RN-19). */
+export async function softDeleteSurvey(surveyId: string): Promise<boolean> {
+  const { count } = await getDb().survey.updateMany({
+    where: { id: surveyId, deletedAt: null },
+    data: { deletedAt: new Date() },
+  });
+  return count === 1;
+}
+
+export type SurveyListFilters = {
+  ownerId: string;
+  status?: SurveyStatus;
+  groupId?: string;
+  q?: string;
+  skip: number;
+  take: number;
+};
+
+export type SurveyListRow = {
+  id: string;
+  title: string;
+  slug: string;
+  status: SurveyStatus;
+  groupId: string | null;
+  groupName: string | null;
+  responseCount: number;
+  lastResponseAt: Date | null;
+  updatedAt: Date;
+};
+
+/**
+ * Pesquisas não excluídas do dono, da última alteração para a mais antiga (RF-08).
+ * Três consultas: página, total e a última resposta das pesquisas da página.
+ */
+export async function findSurveyPage(
+  filters: SurveyListFilters,
+): Promise<{ data: SurveyListRow[]; total: number }> {
+  const where: Prisma.SurveyWhereInput = {
+    ownerId: filters.ownerId,
+    deletedAt: null,
+    ...(filters.status && { status: filters.status }),
+    ...(filters.groupId && { groupId: filters.groupId }),
+    ...(filters.q && { title: { contains: filters.q, mode: "insensitive" } }),
+  };
+  const [rows, total] = await Promise.all([
+    getDb().survey.findMany({
+      where,
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      skip: filters.skip,
+      take: filters.take,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        groupId: true,
+        updatedAt: true,
+        group: { select: { name: true } },
+        _count: { select: { responses: true } },
+      },
+    }),
+    getDb().survey.count({ where }),
+  ]);
+
+  const last = rows.length
+    ? await getDb().surveyResponse.groupBy({
+        by: ["surveyId"],
+        where: { surveyId: { in: rows.map((r) => r.id) } },
+        _max: { submittedAt: true },
+      })
+    : [];
+  const lastBySurvey = new Map(last.map((l) => [l.surveyId, l._max.submittedAt]));
+
+  return {
+    total,
+    data: rows.map(({ group, _count, ...row }) => ({
+      ...row,
+      groupName: group?.name ?? null,
+      responseCount: _count.responses,
+      lastResponseAt: lastBySurvey.get(row.id) ?? null,
+    })),
+  };
+}
+
+/** Grupos do dono, para o filtro da lista (a gestão de grupos chega na F8). */
+export function findOwnGroups(ownerId: string): Promise<{ id: string; name: string }[]> {
+  return getDb().surveyGroup.findMany({
+    where: { ownerId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  });
+}

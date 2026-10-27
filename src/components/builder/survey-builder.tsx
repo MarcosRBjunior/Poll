@@ -2,7 +2,6 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useFieldArray, useForm, type FieldPath, type Resolver } from "react-hook-form";
 import {
@@ -12,6 +11,7 @@ import {
   type SurveyInput,
 } from "@/features/surveys/schemas";
 import type { SurveyDetail } from "@/features/surveys/service";
+import { CopyLinkButton } from "@/components/ui/copy-link-button";
 import { BuilderPreview } from "./builder-preview";
 import { Field, inputClass } from "./fields";
 import { detailToForm, emptySurveyForm } from "./form-values";
@@ -23,6 +23,7 @@ type Status =
   | { kind: "idle" }
   | { kind: "saving" }
   | { kind: "saved" }
+  | { kind: "published" }
   | { kind: "conflict" }
   | { kind: "error"; message: string };
 
@@ -34,7 +35,6 @@ const statusLabel = { DRAFT: "Rascunho", PUBLISHED: "Publicada", CLOSED: "Encerr
 
 /** Construtor de pesquisas (T06, RF-05 a RF-07, RF-09). Sem `detail`, cria uma nova. */
 export function SurveyBuilder({ detail: initial }: Props) {
-  const router = useRouter();
   // O detalhe salvo mais recente: version, slug e status vêm da resposta do PUT.
   const [detail, setDetail] = useState(initial);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -75,7 +75,33 @@ export function SurveyBuilder({ detail: initial }: Props) {
     if (status.kind === "conflict") conflictButton.current?.focus();
   }, [status]);
 
-  async function save(input: SurveyInput) {
+  /** Mostra os erros da API junto dos campos (os caminhos seguem os nomes do formulário). */
+  function showErrors(error: ErrorBody["error"], fallback: string) {
+    const details = error?.details ?? [];
+    details.forEach((d, i) => {
+      setError(
+        d.path as FieldPath<SurveyFormValues>,
+        { type: "server", message: d.message },
+        { shouldFocus: i === 0 },
+      );
+    });
+    setStatus({
+      kind: "error",
+      message: details.length ? (error?.message ?? "Revise os campos destacados.") : fallback,
+    });
+  }
+
+  /** Passa a editar o que foi salvo: ids e version novos vêm do servidor. */
+  function adopt(saved: SurveyDetail) {
+    setDetail(saved);
+    reset(detailToForm(saved));
+    if (!detail) {
+      // Criada agora: a URL vira a de edição sem recarregar a tela.
+      window.history.replaceState(null, "", `/admin/surveys/${saved.id}/edit`);
+    }
+  }
+
+  async function save(input: SurveyInput, publishAfter = false) {
     setStatus({ kind: "saving" });
     let response: Response;
     try {
@@ -89,38 +115,31 @@ export function SurveyBuilder({ detail: initial }: Props) {
       return;
     }
 
-    if (response.ok) {
-      const saved = (await response.json()) as SurveyDetail;
-      if (!detail) {
-        reset(detailToForm(saved)); // limpa o "não salvo" antes de sair da página
-        router.replace(`/admin/surveys/${saved.id}/edit`);
-        return;
-      }
-      setDetail(saved);
-      reset(detailToForm(saved)); // ids novos vêm do servidor
-      setStatus({ kind: "saved" });
+    if (!response.ok) {
+      const error = ((await response.json().catch(() => null)) as ErrorBody | null)?.error;
+      if (error?.code === "VERSION_CONFLICT") setStatus({ kind: "conflict" });
+      else showErrors(error, "Não foi possível salvar. Tente novamente.");
       return;
     }
 
-    const error = ((await response.json().catch(() => null)) as ErrorBody | null)?.error;
-    if (error?.code === "VERSION_CONFLICT") {
-      setStatus({ kind: "conflict" });
+    const saved = (await response.json()) as SurveyDetail;
+    adopt(saved);
+    if (publishAfter) await publish(saved);
+    else setStatus({ kind: "saved" });
+  }
+
+  /** Publicar (RF-11): a API revalida a pesquisa inteira e lista o que falta. */
+  async function publish(saved: SurveyDetail) {
+    const response = await fetch(`/api/v1/surveys/${saved.id}/publish`, { method: "POST" }).catch(
+      () => null,
+    );
+    if (response?.ok) {
+      setDetail({ ...saved, status: "PUBLISHED" });
+      setStatus({ kind: "published" });
       return;
     }
-    const details = error?.details ?? [];
-    details.forEach((d, i) => {
-      setError(
-        d.path as FieldPath<SurveyFormValues>,
-        { type: "server", message: d.message },
-        { shouldFocus: i === 0 },
-      );
-    });
-    setStatus({
-      kind: "error",
-      message: details.length
-        ? (error?.message ?? "Revise os campos destacados.")
-        : "Não foi possível salvar. Tente novamente.",
-    });
+    const error = ((await response?.json().catch(() => null)) as ErrorBody | null)?.error;
+    showErrors(error, "Salvo, mas não foi possível publicar agora. Tente de novo.");
   }
 
   const saving = status.kind === "saving";
@@ -143,9 +162,12 @@ export function SurveyBuilder({ detail: initial }: Props) {
               Resultados
             </Link>
             {detail.status !== "DRAFT" && (
-              <Link href={`/s/${detail.slug}`} className="underline">
-                Abrir a pesquisa
-              </Link>
+              <>
+                <Link href={`/s/${detail.slug}`} className="underline">
+                  Abrir a pesquisa
+                </Link>
+                <CopyLinkButton path={`/s/${detail.slug}`} />
+              </>
             )}
           </div>
         )}
@@ -175,7 +197,7 @@ export function SurveyBuilder({ detail: initial }: Props) {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <form
-          onSubmit={(event) => void handleSubmit(save)(event)}
+          onSubmit={(event) => void handleSubmit((input) => save(input))(event)}
           noValidate
           className={`flex flex-col gap-6 ${showPreview ? "hidden lg:flex" : ""}`}
         >
@@ -207,9 +229,10 @@ export function SurveyBuilder({ detail: initial }: Props) {
                 Adicione a primeira pergunta.
               </p>
             )}
-            {errors.questions?.root?.message && (
-              <p role="alert" className="text-sm font-medium text-red-700 dark:text-red-400">
-                {errors.questions.root.message}
+            {/* Erro da lista inteira: limite de perguntas (schema) ou nenhuma pergunta (publicar). */}
+            {(errors.questions?.message ?? errors.questions?.root?.message) && (
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                {errors.questions?.message ?? errors.questions?.root?.message}
               </p>
             )}
             {fields.map((field, index) => (
@@ -252,8 +275,21 @@ export function SurveyBuilder({ detail: initial }: Props) {
             >
               {saving ? "Salvando…" : "Salvar"}
             </button>
+            {(!detail || detail.status === "DRAFT") && (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void handleSubmit((input) => save(input, true))()}
+                className="rounded-md border border-zinc-900 px-5 py-2 font-medium disabled:opacity-60 dark:border-zinc-100"
+              >
+                Salvar e publicar
+              </button>
+            )}
             <p aria-live="polite" className="text-sm">
               {status.kind === "saved" && !isDirty && "Alterações salvas."}
+              {status.kind === "published" &&
+                !isDirty &&
+                "Pesquisa publicada. O link está no topo da página."}
               {isDirty && !saving && "Há alterações não salvas."}
             </p>
             {status.kind === "error" && (
