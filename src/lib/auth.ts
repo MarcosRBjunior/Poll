@@ -1,4 +1,4 @@
-import { unstable_rethrow } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { getUserById, type UserRecord } from "@/features/users/service";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -32,6 +32,13 @@ export async function requireUser(): Promise<SessionUser> {
   return user;
 }
 
+/** Páginas que exigem conta (T11, T12): sem sessão, vai para o login e volta para `next`. */
+export async function requireUserOrLogin(next: string): Promise<SessionUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(next)}`);
+  return user;
+}
+
 /**
  * Exige o papel ADMIN em toda rota, página e Server Action de gestão (RN-12).
  * Sem sessão: 401. Com sessão, mas sem papel: 404, para não confirmar que a rota existe.
@@ -44,9 +51,9 @@ export async function requireAdmin(): Promise<SessionUser> {
 
 /**
  * Destino depois do login: só caminho interno (evita redirecionamento aberto).
- * Sem `next` válido, o administrador vai para /admin e os demais para / (até a F7, /requests).
+ * Sem `next` válido, o administrador vai para /admin e os demais para /requests (T12).
  */
 export function afterLoginPath(next: string | null | undefined, role: UserRecord["role"]): string {
   if (next && /^\/(?![/\\])/.test(next)) return next;
-  return role === "ADMIN" ? "/admin" : "/";
+  return role === "ADMIN" ? "/admin" : "/requests";
 }

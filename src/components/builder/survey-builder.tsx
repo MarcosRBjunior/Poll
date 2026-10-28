@@ -17,7 +17,16 @@ import { Field, inputClass } from "./fields";
 import { detailToForm, emptySurveyForm } from "./form-values";
 import { QuestionEditor } from "./question-editor";
 
-type Props = { detail?: SurveyDetail };
+/** Solicitação que originou a pesquisa (RF-22): preenche o título e fica visível ao montar. */
+export type FromRequest = {
+  id: string;
+  topic: string;
+  goal: string;
+  suggestedQuestions: string | null;
+  audience: string | null;
+};
+
+type Props = { detail?: SurveyDetail; fromRequest?: FromRequest };
 
 type Status =
   | { kind: "idle" }
@@ -34,7 +43,7 @@ type ErrorBody = {
 const statusLabel = { DRAFT: "Rascunho", PUBLISHED: "Publicada", CLOSED: "Encerrada" } as const;
 
 /** Construtor de pesquisas (T06, RF-05 a RF-07, RF-09). Sem `detail`, cria uma nova. */
-export function SurveyBuilder({ detail: initial }: Props) {
+export function SurveyBuilder({ detail: initial, fromRequest }: Props) {
   // O detalhe salvo mais recente: version, slug e status vêm da resposta do PUT.
   const [detail, setDetail] = useState(initial);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -45,7 +54,9 @@ export function SurveyBuilder({ detail: initial }: Props) {
 
   const { control, register, handleSubmit, setValue, setError, reset, getValues, formState } =
     useForm<SurveyFormValues, unknown, SurveyInput>({
-      defaultValues: initial ? detailToForm(initial) : emptySurveyForm(),
+      defaultValues: initial
+        ? detailToForm(initial)
+        : { ...emptySurveyForm(), title: fromRequest?.topic.slice(0, 120) ?? "" },
       // O schema converte os textos do formulário (valores, limites) em números.
       resolver: zodResolver(surveyInputSchema) as unknown as Resolver<
         SurveyFormValues,
@@ -108,7 +119,9 @@ export function SurveyBuilder({ detail: initial }: Props) {
       response = await fetch(detail ? `/api/v1/surveys/${detail.id}` : "/api/v1/surveys", {
         method: detail ? "PUT" : "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(detail ? { ...input, version: detail.version } : input),
+        body: JSON.stringify(
+          detail ? { ...input, version: detail.version } : { ...input, requestId: fromRequest?.id },
+        ),
       });
     } catch {
       setStatus({ kind: "error", message: "Não foi possível salvar: verifique sua conexão." });
@@ -172,6 +185,31 @@ export function SurveyBuilder({ detail: initial }: Props) {
           </div>
         )}
       </header>
+
+      {fromRequest && !detail && (
+        <aside
+          aria-label="Solicitação de origem"
+          className="flex flex-col gap-2 rounded-md border border-zinc-300 p-3 text-sm dark:border-zinc-700"
+        >
+          <p className="font-medium">A partir da solicitação “{fromRequest.topic}”</p>
+          <p className="whitespace-pre-line break-words">
+            <strong>Objetivo:</strong> {fromRequest.goal}
+          </p>
+          {fromRequest.audience && (
+            <p className="break-words">
+              <strong>Público-alvo:</strong> {fromRequest.audience}
+            </p>
+          )}
+          {fromRequest.suggestedQuestions && (
+            <p className="whitespace-pre-line break-words">
+              <strong>Sugestões de perguntas:</strong> {fromRequest.suggestedQuestions}
+            </p>
+          )}
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Ao salvar, a solicitação passa a aceita; ao publicar, a concluída.
+          </p>
+        </aside>
+      )}
 
       {restricted && (
         <div

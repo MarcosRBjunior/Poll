@@ -125,22 +125,61 @@ export type NewSurvey = SurveyData & {
   questions: (QuestionData & { options: OptionData[] })[];
 };
 
-/** Cria o rascunho com perguntas e opções numa escrita aninhada (uma transação). */
-export async function insertSurvey(data: NewSurvey): Promise<string> {
+// Escritas grandes fazem dezenas de comandos; contra o banco remoto, 5 s não bastam.
+const updateTransactionOptions = { maxWait: 5_000, timeout: 30_000 };
+
+/** A solicitação pedida já foi atendida, recusada ou ligada a outra pesquisa. */
+export class RequestUnavailableError extends Error {
+  override readonly name = "RequestUnavailableError";
+}
+
+/**
+ * Cria o rascunho com perguntas e opções. Com `requestId`, na mesma transação liga a
+ * solicitação e a leva a `ACCEPTED` (RN-22); se ela não está mais aberta, nada é gravado.
+ */
+export async function insertSurvey(data: NewSurvey, requestId?: string): Promise<string> {
   const { questions, ...survey } = data;
-  const created = await getDb().survey.create({
-    data: {
-      ...survey,
-      questions: {
-        create: questions.map(({ options, ...question }) => ({
-          ...question,
-          options: { create: options },
-        })),
+  return getDb().$transaction(async (tx) => {
+    const created = await tx.survey.create({
+      data: {
+        ...survey,
+        questions: {
+          create: questions.map(({ options, ...question }) => ({
+            ...question,
+            options: { create: options },
+          })),
+        },
       },
-    },
-    select: { id: true },
+      select: { id: true },
+    });
+    if (requestId) {
+      const { count } = await tx.surveyRequest.updateMany({
+        where: { id: requestId, surveyId: null, status: { in: ["PENDING", "IN_REVIEW"] } },
+        data: { surveyId: created.id, status: "ACCEPTED" },
+      });
+      if (count === 0) throw new RequestUnavailableError();
+    }
+    return created.id;
+  }, updateTransactionOptions);
+}
+
+/**
+ * Publica o rascunho e, na mesma transação, conclui a solicitação ligada que estava
+ * aceita (RN-22). Devolve `false` se o status já tinha mudado.
+ */
+export async function publishDraft(surveyId: string, publishedAt: Date): Promise<boolean> {
+  return getDb().$transaction(async (tx) => {
+    const { count } = await tx.survey.updateMany({
+      where: { id: surveyId, status: "DRAFT", deletedAt: null },
+      data: { status: "PUBLISHED", publishedAt },
+    });
+    if (count === 0) return false;
+    await tx.surveyRequest.updateMany({
+      where: { surveyId, status: "ACCEPTED" },
+      data: { status: "DONE" },
+    });
+    return true;
   });
-  return created.id;
 }
 
 /** Plano de edição montado pelo serviço; aqui só é executado (RN-11, RN-13, RN-17). */
@@ -159,9 +198,6 @@ export type SurveyUpdatePlan = {
     options: (OptionData & { id?: string })[];
   })[];
 };
-
-// Edições maiores fazem dezenas de comandos; contra o banco remoto, 5 s não bastam.
-const updateTransactionOptions = { maxWait: 5_000, timeout: 30_000 };
 
 /**
  * Aplica o plano numa transação. Devolve `false` se a `version` mudou nesse meio-tempo

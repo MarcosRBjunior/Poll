@@ -154,6 +154,9 @@ export const surveyInputSchema = z.object({
     .max(MAX_QUESTIONS, `Use no máximo ${MAX_QUESTIONS} perguntas.`),
 });
 
+/** Criar (`POST`): `requestId` liga a nova pesquisa a uma solicitação (RF-22). */
+export const surveyCreateSchema = surveyInputSchema.extend({ requestId: id.optional() });
+
 /** Salvar edição (`PUT`): a mesma estrutura mais a `version` que foi aberta (RN-17). */
 export const surveyUpdateSchema = surveyInputSchema.extend({
   version: z.number().int().min(1),

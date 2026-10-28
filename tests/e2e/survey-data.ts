@@ -87,3 +87,14 @@ export async function createE2ESurvey(status: Status = "PUBLISHED", existingOwne
       }),
   };
 }
+
+/** Apaga uma pesquisa criada pelo teste, com as respostas (Answer não cascateia pela pergunta). */
+export function deleteSurvey(id: string) {
+  return withDb(async (db) => {
+    await db.query(
+      `DELETE FROM "Answer" WHERE "responseId" IN (SELECT id FROM "SurveyResponse" WHERE "surveyId" = $1)`,
+      [id],
+    );
+    await db.query(`DELETE FROM "Survey" WHERE id = $1`, [id]);
+  });
+}

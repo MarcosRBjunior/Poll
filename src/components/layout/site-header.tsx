@@ -45,11 +45,17 @@ async function AccountLinks() {
           <Link href="/admin/surveys" className={linkClass}>
             Pesquisas
           </Link>
+          <Link href="/admin/requests" className={linkClass}>
+            Solicitações
+          </Link>
           <Link href="/admin" className={linkClass}>
             Administração
           </Link>
         </>
       )}
+      <Link href="/requests" className={linkClass}>
+        Minhas solicitações
+      </Link>
       <SignOutButton />
     </>
   );
