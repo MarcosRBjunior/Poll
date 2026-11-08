@@ -30,18 +30,19 @@ Os testes de sessão real usam um projeto Supabase separado, só de teste: copie
 
 ## Comandos
 
-| Comando                 | O que faz                                          |
-| ----------------------- | -------------------------------------------------- |
-| `npm run dev`           | Servidor de desenvolvimento                        |
-| `npm run lint`          | ESLint                                             |
-| `npm run format`        | Prettier                                           |
-| `npm run typecheck`     | Checagem de tipos                                  |
-| `npm test`              | Testes unitários, de integração e de API (Vitest)  |
-| `npm run test:coverage` | Testes com cobertura                               |
-| `npm run test:e2e`      | Testes ponta a ponta (Playwright)                  |
-| `npm run db:up`         | Postgres local via Docker Compose                  |
-| `npm run db:migrate`    | Migrações (prisma migrate dev)                     |
-| `npm run db:seed`       | Seed (o administrador precisa ter entrado uma vez) |
+| Comando                 | O que faz                                            |
+| ----------------------- | ---------------------------------------------------- |
+| `npm run dev`           | Servidor de desenvolvimento                          |
+| `npm run lint`          | ESLint                                               |
+| `npm run format`        | Prettier                                             |
+| `npm run typecheck`     | Checagem de tipos                                    |
+| `npm test`              | Testes unitários, de integração e de API (Vitest)    |
+| `npm run test:coverage` | Testes com cobertura                                 |
+| `npm run test:e2e`      | Testes ponta a ponta (Playwright)                    |
+| `npm run test:e2e:prod` | Ponta a ponta contra o build de produção, como no CI |
+| `npm run db:up`         | Postgres local via Docker Compose                    |
+| `npm run db:migrate`    | Migrações (prisma migrate dev)                       |
+| `npm run db:seed`       | Seed (o administrador precisa ter entrado uma vez)   |
 
 ## Saúde
 
