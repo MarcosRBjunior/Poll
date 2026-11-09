@@ -63,7 +63,7 @@ export async function createRequest(
       { retryAfter },
     );
   }
-  return toMine(await insertRequest(requesterId, input));
+  return toMine(await insertRequest(requesterId, input, now));
 }
 
 /** Minhas solicitações (`GET /api/v1/survey-requests/mine`): só as próprias (RN-22). */

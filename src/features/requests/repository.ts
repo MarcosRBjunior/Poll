@@ -17,8 +17,16 @@ const mineSelect = {
 
 export type MyRequestRow = Prisma.SurveyRequestGetPayload<{ select: typeof mineSelect }>;
 
-export function insertRequest(requesterId: string, data: RequestInput): Promise<MyRequestRow> {
-  return getDb().surveyRequest.create({ data: { ...data, requesterId }, select: mineSelect });
+/** `createdAt` vem do serviço: o mesmo instante usado para contar o limite do dia. */
+export function insertRequest(
+  requesterId: string,
+  data: RequestInput,
+  createdAt: Date,
+): Promise<MyRequestRow> {
+  return getDb().surveyRequest.create({
+    data: { ...data, requesterId, createdAt },
+    select: mineSelect,
+  });
 }
 
 /** Solicitações de um usuário, da mais nova para a mais antiga (só as próprias, RN-22). */
