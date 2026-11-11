@@ -45,6 +45,9 @@ async function AccountLinks() {
           <Link href="/admin/surveys" className={linkClass}>
             Pesquisas
           </Link>
+          <Link href="/admin/groups" className={linkClass}>
+            Grupos
+          </Link>
           <Link href="/admin/requests" className={linkClass}>
             Solicitações
           </Link>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { SurveyBuilder } from "@/components/builder/survey-builder";
+import { listGroups } from "@/features/groups/service";
 import { getSurveyDetail } from "@/features/surveys/service";
 import { requireAdmin } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
@@ -31,5 +32,5 @@ async function Editor({ params }: Pick<PageProps<"/admin/surveys/[id]/edit">, "p
     if (error instanceof AppError && error.code === "NOT_FOUND") notFound();
     throw error;
   }
-  return <SurveyBuilder detail={detail} />;
+  return <SurveyBuilder detail={detail} groups={await listGroups(admin.id)} />;
 }
