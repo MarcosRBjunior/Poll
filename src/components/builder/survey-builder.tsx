@@ -26,7 +26,10 @@ export type FromRequest = {
   audience: string | null;
 };
 
-type Props = { detail?: SurveyDetail; fromRequest?: FromRequest };
+/** Grupos do administrador para o seletor (RF-16): mover para um grupo ou para fora dele. */
+export type GroupChoice = { id: string; name: string };
+
+type Props = { detail?: SurveyDetail; fromRequest?: FromRequest; groups: GroupChoice[] };
 
 type Status =
   | { kind: "idle" }
@@ -43,7 +46,7 @@ type ErrorBody = {
 const statusLabel = { DRAFT: "Rascunho", PUBLISHED: "Publicada", CLOSED: "Encerrada" } as const;
 
 /** Construtor de pesquisas (T06, RF-05 a RF-07, RF-09). Sem `detail`, cria uma nova. */
-export function SurveyBuilder({ detail: initial, fromRequest }: Props) {
+export function SurveyBuilder({ detail: initial, fromRequest, groups }: Props) {
   // O detalhe salvo mais recente: version, slug e status vêm da resposta do PUT.
   const [detail, setDetail] = useState(initial);
   const [status, setStatus] = useState<Status>({ kind: "idle" });
@@ -250,6 +253,27 @@ export function SurveyBuilder({ detail: initial, fromRequest }: Props) {
             >
               {(props) => (
                 <textarea {...props} {...register("description")} rows={3} className={inputClass} />
+              )}
+            </Field>
+            <Field
+              id="survey-group"
+              label="Grupo (opcional)"
+              error={errors.groupId?.message}
+              hint={
+                groups.length === 0
+                  ? "Nenhum grupo criado ainda. Crie em Grupos para reunir pesquisas relacionadas."
+                  : "Pesquisas do mesmo grupo aparecem juntas no painel de tendências."
+              }
+            >
+              {(props) => (
+                <select {...props} {...register("groupId")} className={inputClass}>
+                  <option value="">Sem grupo</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
               )}
             </Field>
             <label className="flex items-center gap-2 text-sm">

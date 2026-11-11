@@ -183,6 +183,8 @@ export type QuestionFormValues = {
 export type SurveyFormValues = {
   title: string;
   description: string;
+  /** Vazio = sem grupo (o schema converte em null). */
+  groupId: string;
   isListed: boolean;
   questions: QuestionFormValues[];
 };

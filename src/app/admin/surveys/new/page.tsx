@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { SurveyBuilder } from "@/components/builder/survey-builder";
+import { listGroups } from "@/features/groups/service";
 import { getRequestForAdmin } from "@/features/requests/service";
 import { requireAdmin } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
@@ -22,18 +23,20 @@ export default function NewSurveyPage({ searchParams }: PageProps<"/admin/survey
 // Fora do prerender: o formulário gera ids aleatórios (useFieldArray) ao renderizar.
 async function NewSurvey({ searchParams }: Pick<PageProps<"/admin/surveys/new">, "searchParams">) {
   await connection();
-  await requireAdmin();
+  const admin = await requireAdmin();
+  const groups = await listGroups(admin.id);
   const raw = (await searchParams).request;
   const requestId = Array.isArray(raw) ? raw[0] : raw;
-  if (!requestId) return <SurveyBuilder />;
+  if (!requestId) return <SurveyBuilder groups={groups} />;
 
   const request = await getRequestForAdmin(requestId).catch((error: unknown) => {
     if (error instanceof AppError && error.code === "NOT_FOUND") return null; // abre em branco
     throw error;
   });
-  if (!request) return <SurveyBuilder />;
+  if (!request) return <SurveyBuilder groups={groups} />;
   return (
     <SurveyBuilder
+      groups={groups}
       fromRequest={{
         id: request.id,
         topic: request.topic,

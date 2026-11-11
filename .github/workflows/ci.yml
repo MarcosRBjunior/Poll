@@ -80,7 +80,9 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # Os pacotes do Ubuntu às vezes não baixam no runner; o navegador sozinho basta,
+      # porque a imagem do GitHub já traz as bibliotecas do Chrome.
+      - run: timeout 240 npx playwright install --with-deps chromium || npx playwright install chromium
       - run: npx prisma migrate deploy
       - run: npm run build
       - run: npm run test:e2e

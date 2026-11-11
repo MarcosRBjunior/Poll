@@ -13,6 +13,7 @@ export function detailToForm(detail: SurveyDetail): SurveyFormValues {
   return {
     title: detail.title,
     description: detail.description ?? "",
+    groupId: detail.groupId ?? "",
     isListed: detail.isListed,
     questions: detail.questions
       .filter((q) => !q.archivedAt)
@@ -34,6 +35,7 @@ export function detailToForm(detail: SurveyDetail): SurveyFormValues {
 export const emptySurveyForm = (): SurveyFormValues => ({
   title: "",
   description: "",
+  groupId: "",
   isListed: false,
   questions: [],
 });

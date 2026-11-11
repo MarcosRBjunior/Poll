@@ -5,7 +5,6 @@ import {
   applySurveyUpdate,
   changeStatus,
   findListedSurveys,
-  findOwnGroups,
   findSurveyPage,
   softDeleteSurvey,
   type ListedSurvey,
@@ -409,11 +408,6 @@ export async function listSurveys(adminId: string, query: unknown): Promise<Page
     take: pageSize,
   });
   return { data, total, page, pageSize };
-}
-
-/** Grupos para o filtro da lista. */
-export function listOwnGroups(adminId: string) {
-  return findOwnGroups(adminId);
 }
 
 // ---- Vitrine (RF-20) ----
