@@ -369,15 +369,6 @@ export async function findSurveyPage(
   };
 }
 
-/** Grupos do dono, para o filtro da lista (a gestão de grupos chega na F8). */
-export function findOwnGroups(ownerId: string): Promise<{ id: string; name: string }[]> {
-  return getDb().surveyGroup.findMany({
-    where: { ownerId },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
-}
-
 export type ListedSurvey = {
   slug: string;
   title: string;

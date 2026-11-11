@@ -3,7 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { SurveyList } from "@/components/surveys/survey-list";
-import { listOwnGroups } from "@/features/surveys/service";
+import { listGroups } from "@/features/groups/service";
 import { requireAdmin } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Pesquisas — Poll" };
@@ -31,5 +31,5 @@ export default function SurveysPage() {
 async function Surveys() {
   await connection();
   const admin = await requireAdmin();
-  return <SurveyList groups={await listOwnGroups(admin.id)} />;
+  return <SurveyList groups={await listGroups(admin.id)} />;
 }
