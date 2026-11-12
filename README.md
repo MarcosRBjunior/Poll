@@ -4,7 +4,7 @@ O administrador cria pesquisas sem código, qualquer pessoa responde por link e 
 
 Projeto 07 do Portfólio Boost Program. Especificação em [`docs/spec.md`](docs/spec.md).
 
-> Em construção — fase atual: **8, Grupos e painel de tendências** (`v0.2.0` no ar). Produção: https://poll-chi-six.vercel.app
+> Em construção — fase atual: **9, Endurecimento** (`v0.2.0` no ar; grupos e painel de tendências já em produção). Produção: https://poll-chi-six.vercel.app
 
 ## Stack
 
