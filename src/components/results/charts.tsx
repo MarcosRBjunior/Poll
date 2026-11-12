@@ -160,3 +160,80 @@ export function PerDayLineChart({ perDay }: { perDay: SurveyResults["perDay"] })
     </div>
   );
 }
+
+type TrendLineProps = {
+  /** Rótulo curto de cada ponto no eixo. */
+  labels: string[];
+  /** Título do tooltip de cada ponto. */
+  titles: string[];
+  values: (number | null)[];
+  kind: "count" | "percent";
+  /** Texto do tooltip de cada ponto (o padrão mostra o valor). */
+  describe?: (index: number) => string;
+};
+
+/**
+ * Linha de uma série ao longo dos períodos (painel de tendências). Em percentual, o eixo
+ * vai de 0 a 100 e período sem base (`null`) fica sem ponto.
+ */
+export function TrendLineChart({ labels, titles, values, kind, describe }: TrendLineProps) {
+  const colors = useChartColors();
+  const format = (n: number) => (kind === "percent" ? formatPercent(n) : answers(n));
+
+  const chartOptions: ChartOptions<"line"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: (items) => titles[items[0]!.dataIndex]!,
+          label: (item) =>
+            describe ? describe(item.dataIndex) : format(values[item.dataIndex] ?? 0),
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: colors.text, maxRotation: 0, autoSkip: true },
+        grid: { display: false },
+      },
+      y: {
+        beginAtZero: true,
+        ...(kind === "percent" ? { max: 100 } : {}),
+        ticks: {
+          precision: 0,
+          color: colors.text,
+          ...(kind === "percent"
+            ? { stepSize: 25, callback: (v) => formatPercent(Number(v)) }
+            : {}),
+        },
+        grid: { color: colors.grid },
+        border: { display: false },
+      },
+    },
+  };
+
+  return (
+    <div className="h-56">
+      <Line
+        options={chartOptions}
+        data={{
+          labels,
+          datasets: [
+            {
+              data: values,
+              borderColor: colors.series,
+              backgroundColor: colors.series,
+              borderWidth: 2,
+              pointRadius: values.length <= 31 ? 4 : 0,
+              pointHoverRadius: 6,
+              spanGaps: false,
+            },
+          ],
+        }}
+      />
+    </div>
+  );
+}

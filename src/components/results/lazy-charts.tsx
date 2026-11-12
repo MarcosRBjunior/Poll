@@ -17,3 +17,8 @@ export const PerDayLineChart = dynamic(() => import("./charts").then((m) => m.Pe
   ssr: false,
   loading: ChartSkeleton,
 });
+
+export const TrendLineChart = dynamic(() => import("./charts").then((m) => m.TrendLineChart), {
+  ssr: false,
+  loading: ChartSkeleton,
+});

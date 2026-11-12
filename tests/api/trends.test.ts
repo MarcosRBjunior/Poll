@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/v1/trends/route";
-import { subtractMonths } from "@/features/trends/service";
+import { subtractMonths } from "@/features/trends/periods";
 import { todayIso } from "@/lib/format";
 import { createUser, db, resetDatabase } from "../fixtures/db";
 import { expectAdminOnly } from "../fixtures/permission";
