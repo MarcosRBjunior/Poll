@@ -45,6 +45,26 @@ jobs:
       - run: npm run test:coverage
       - run: npm run build
 
+  security:
+    name: Auditoria e segredos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # a varredura de segredos lê todo o histórico
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      # Produção: qualquer vulnerabilidade conhecida barra. Desenvolvimento: só alta ou crítica.
+      - run: npm audit --omit=dev --audit-level=low
+      - run: npm audit --audit-level=high
+      # Segredo no código ou no histórico barra o merge (spec 10.2). O relatório não mostra o valor.
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+
   e2e:
     name: E2E
     runs-on: ubuntu-latest
