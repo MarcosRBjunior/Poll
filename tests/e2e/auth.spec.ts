@@ -37,7 +37,9 @@ test.describe("com sessão real do projeto de teste", () => {
   }) => {
     await loginAs(context, testSupabase.admin);
     await page.goto("/admin");
-    await expect(page.getByRole("heading", { name: "Administração" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Painel de tendências" }),
+    ).toBeVisible();
 
     await page.getByRole("button", { name: "Sair" }).click();
     await expect(page).toHaveURL(/\/$/);

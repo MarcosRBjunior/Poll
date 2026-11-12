@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { bucketStart, listPeriods, subtractMonths } from "@/features/trends/service";
+import { bucketStart, defaultPeriod, listPeriods, subtractMonths } from "@/features/trends/periods";
 
 describe("períodos do painel de tendências", () => {
+  it("defaultPeriod: últimos 3 meses até o dia dado", () => {
+    expect(defaultPeriod("2026-11-12")).toEqual({ from: "2026-08-12", to: "2026-11-12" });
+  });
+
   it("subtractMonths usa o último dia quando o dia não existe no mês de destino", () => {
     expect(subtractMonths("2026-11-11", 3)).toBe("2026-08-11");
     expect(subtractMonths("2026-05-31", 3)).toBe("2026-02-28");

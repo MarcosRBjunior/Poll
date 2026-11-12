@@ -10,6 +10,7 @@ import {
   type TrendPeriod,
   type TrendSurveyRecord,
 } from "./repository";
+import { defaultPeriod, listPeriods } from "./periods";
 import { trendsQuerySchema, type TrendBucket } from "./schemas";
 
 type QuestionType = TrendSurveyRecord["questions"][number]["type"];
@@ -55,9 +56,6 @@ export type Trends = {
   topOptions: QuestionRanking[];
   optionTrends: OptionTrend[];
 };
-
-/** Janela padrão do painel: os últimos 3 meses (decisão da F8). */
-const DEFAULT_MONTHS = 3;
 
 /**
  * Painel de tendências (T09). Três consultas agregadas além da lista de pesquisas;
@@ -202,51 +200,14 @@ function index(rows: BucketCount[]): Map<string, Map<string, number>> {
 const total = (counts: Map<string, number> | undefined) =>
   counts ? [...counts.values()].reduce((sum, n) => sum + n, 0) : 0;
 
-// ---- Datas: dias do calendário (AAAA-MM-DD), calculados em UTC para não depender do fuso ----
-
-const toDate = (iso: string) => new Date(`${iso}T00:00:00Z`);
-const toIso = (date: Date) => date.toISOString().slice(0, 10);
-
-/** Mesmo dia `months` meses antes; se o dia não existe no mês de destino, o último dia dele. */
-export function subtractMonths(iso: string, months: number): string {
-  const date = toDate(iso);
-  const day = date.getUTCDate();
-  date.setUTCDate(1);
-  date.setUTCMonth(date.getUTCMonth() - months);
-  const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
-  date.setUTCDate(Math.min(day, lastDay));
-  return toIso(date);
-}
-
 /** Período pedido, com os padrões: até hoje e começando 3 meses antes do fim. */
 function resolvePeriod(from: string | undefined, to: string | undefined): TrendPeriod {
   const end = to ?? todayIso();
-  const start = from ?? subtractMonths(end, DEFAULT_MONTHS);
+  const start = from ?? defaultPeriod(end).from;
   if (start > end) {
     throw new AppError("VALIDATION_ERROR", "Há campos inválidos.", [
       { path: "to", message: "A data final precisa ser igual ou posterior à inicial." },
     ]);
   }
   return { from: start, to: end };
-}
-
-/** Início do período que contém o dia: segunda-feira da semana ou dia 1 do mês. */
-export function bucketStart(iso: string, bucket: TrendBucket): string {
-  if (bucket === "month") return `${iso.slice(0, 7)}-01`;
-  const date = toDate(iso);
-  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
-  return toIso(date);
-}
-
-/** Todos os períodos que tocam o intervalo, do primeiro ao último. */
-export function listPeriods({ from, to }: TrendPeriod, bucket: TrendBucket): string[] {
-  const periods: string[] = [];
-  const cursor = toDate(bucketStart(from, bucket));
-  const last = bucketStart(to, bucket);
-  while (toIso(cursor) <= last) {
-    periods.push(toIso(cursor));
-    if (bucket === "month") cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-    else cursor.setUTCDate(cursor.getUTCDate() + 7);
-  }
-  return periods;
 }

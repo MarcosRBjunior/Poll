@@ -52,7 +52,7 @@ async function AccountLinks() {
             Solicitações
           </Link>
           <Link href="/admin" className={linkClass}>
-            Administração
+            Tendências
           </Link>
         </>
       )}
