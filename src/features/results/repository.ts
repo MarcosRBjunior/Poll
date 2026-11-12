@@ -52,7 +52,7 @@ export async function findResultsSurvey(
 }
 
 /** Condição de período sobre `submittedAt`, com os limites do dia no fuso dos resultados. */
-function periodCondition(column: Prisma.Sql, period: Period): Prisma.Sql {
+export function periodCondition(column: Prisma.Sql, period: Period): Prisma.Sql {
   const conditions = [Prisma.sql`TRUE`];
   if (period.from) {
     conditions.push(
