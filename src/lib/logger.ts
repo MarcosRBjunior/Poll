@@ -5,21 +5,54 @@ type Fields = Record<string, unknown>;
 
 const rank: Record<Level, number> = { debug: 10, info: 20, warn: 30, error: 40 };
 
+/**
+ * Campos que nunca vão para o log, mesmo se alguém os passar por engano (US-8.2).
+ * Comparação sem maiúsculas, hífen ou sublinhado: `x-forwarded-for` vira `xforwardedfor`.
+ */
+const SENSITIVE_KEYS = new Set([
+  "email",
+  "name",
+  "ip",
+  "xforwardedfor",
+  "xrealip",
+  "cookie",
+  "setcookie",
+  "authorization",
+  "password",
+  "token",
+  "accesstoken",
+  "refreshtoken",
+  "code",
+  "respondentkey",
+  "answers",
+  "text",
+  "textvalue",
+  "body",
+]);
+export const REDACTED = "[removido]";
+
 function minLevel(): Level {
   if (process.env.NODE_ENV === "test") return "error";
   return process.env.NODE_ENV === "production" ? "info" : "debug";
 }
 
-function serialize(value: unknown): unknown {
+const isSensitive = (key: string) => SENSITIVE_KEYS.has(key.toLowerCase().replace(/[-_]/g, ""));
+
+function serialize(value: unknown, depth = 0): unknown {
   if (value instanceof Error)
     return { name: value.name, message: value.message, stack: value.stack };
-  return value;
+  if (depth >= 4 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((item) => serialize(item, depth + 1));
+  const out: Fields = {};
+  for (const [key, item] of Object.entries(value)) {
+    out[key] = isSensitive(key) ? REDACTED : serialize(item, depth + 1);
+  }
+  return out;
 }
 
 function write(level: Level, msg: string, fields: Fields = {}) {
   if (rank[level] < rank[minLevel()]) return;
-  const entry: Fields = { level, time: new Date().toISOString(), msg };
-  for (const [key, value] of Object.entries(fields)) entry[key] = serialize(value);
+  const entry = { level, time: new Date().toISOString(), msg, ...(serialize(fields) as Fields) };
   const line = JSON.stringify(entry);
   if (level === "error") console.error(line);
   else console.log(line);
