@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
 import { type ErrorBody, json, withRoute, assertSameOrigin } from "@/lib/http";
@@ -92,5 +92,44 @@ describe("Retry-After", () => {
     })(new Request("http://localhost/x"), undefined);
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("42");
+  });
+});
+
+describe("logs da requisição (US-8.2)", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("US-8.2 (1): erro forçado sai em JSON com o requestId que voltou na resposta", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const stderr = vi.spyOn(console, "error").mockImplementation(() => {});
+    const stdout = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const response = await withRoute(() => {
+      throw new Error("falha forçada");
+    })(new Request("http://localhost/api/v1/test?email=fulana@exemplo.com"), undefined);
+    const { requestId } = ((await response.json()) as ErrorBody).error;
+    expect(response.headers.get("x-request-id")).toBe(requestId);
+
+    const error = JSON.parse(stderr.mock.calls[0]![0] as string);
+    expect(error).toMatchObject({
+      level: "error",
+      msg: "unhandled error",
+      requestId,
+      error: { name: "Error", message: "falha forçada" },
+    });
+
+    const request = JSON.parse(stdout.mock.calls[0]![0] as string);
+    expect(request).toEqual({
+      level: "info",
+      time: expect.any(String),
+      msg: "request",
+      requestId,
+      method: "GET",
+      route: "/api/v1/test",
+      status: 500,
+      durationMs: expect.any(Number),
+    });
   });
 });
