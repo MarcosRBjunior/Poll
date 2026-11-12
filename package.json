@@ -18,6 +18,8 @@
     "db:up": "docker compose up -d --wait db",
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
+    "load:seed": "tsx scripts/load/seed.ts",
+    "load:run": "node scripts/load/run.mjs",
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "postinstall": "prisma generate"
   },
@@ -49,6 +51,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^5.0.5",
+    "autocannon": "^9.0.0",
     "dotenv": "^18.0.8",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
