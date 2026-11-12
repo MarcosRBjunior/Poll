@@ -2,6 +2,7 @@
 
 // Erro inesperado ao carregar uma página (spec 7): oferece "Tentar de novo".
 export default function ErrorPage({
+  error,
   reset,
 }: {
   error: Error & { digest?: string };
@@ -13,6 +14,12 @@ export default function ErrorPage({
       <p className="text-zinc-700 dark:text-zinc-300">
         Não foi possível carregar esta página agora.
       </p>
+      {/* O mesmo código sai no log do servidor (instrumentation.ts), para achar o erro. */}
+      {error.digest && (
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          Código do erro: <code>{error.digest}</code>
+        </p>
+      )}
       <button
         type="button"
         onClick={reset}
