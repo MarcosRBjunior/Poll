@@ -123,7 +123,7 @@ Todas tomadas em 19/10/2026. Não reabrir sem pedido.
 
 | ID   | Decisão                                            | O que significa no código                                                                                                                                                                                     |
 | ---- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| D-01 | Login pelo Supabase Auth, usado só para login      | GitHub e link por e-mail. `User` local espelha o usuário do Supabase (mesmo id). Nenhum dado de domínio no Supabase                                                                                           |
+| D-01 | Login pelo Supabase Auth, usado só para login      | GitHub e código de 6 dígitos por e-mail (até a F9, link por e-mail: filtros de e-mail institucional abriam o link antes da pessoa). `User` local espelha o usuário do Supabase (mesmo id). Nenhum dado de domínio no Supabase                                                                                           |
 | D-02 | Respondente anônimo por padrão, com login opcional | Envio aceita sessão ou não. Com sessão, grava `SurveyResponse.userId`                                                                                                                                         |
 | D-03 | Banco no Prisma Postgres                           | URL com pool para o app, URL direta para migrações, banco separado para previews. Cada consulta conta como operação: agregar em poucas queries                                                                |
 | D-04 | Quatro tipos de pergunta                           | `SINGLE_CHOICE`, `MULTIPLE_CHOICE`, `SHORT_TEXT`, `LONG_TEXT`. Sim/não e escala são escolha única com valores numéricos. Sem "Outro, qual?"                                                                   |
@@ -424,7 +424,7 @@ Cada requisito traz a fase em que é implementado. Critérios de aceite numerado
 ### RF-18 — Login · F3 (login do respondente na F7)
 
 - **Objetivo:** só o administrador cria, gerencia e vê dados privados; quem responde pode entrar, se quiser, para responder identificado e solicitar pesquisas.
-- **Entrada:** login pelo Supabase Auth, com GitHub ou link por e-mail.
+- **Entrada:** login pelo Supabase Auth, com GitHub ou código de 6 dígitos enviado por e-mail.
 - **Processamento:** o Supabase emite a sessão em cookie; o `proxy.ts` renova a sessão; o servidor valida a sessão com `supabase.auth.getClaims()` a cada requisição protegida (nunca confiando em `getSession()`); no primeiro login, o callback cria o `User` local com o mesmo id do Supabase; o e-mail igual a `ADMIN_EMAIL` recebe `ADMIN`.
 - **Saída:** sessão ativa; o administrador acessa `/admin`; o usuário comum acessa `/requests`.
 - **Regras:** RN-12, RN-14, RN-22.
@@ -917,7 +917,7 @@ src/app/
 ### T04 — Entrar · `/login` · F3
 
 - **Acesso:** qualquer pessoa. **Requisito:** RF-18.
-- **Mostra:** botões "Entrar com GitHub" e "Receber link por e-mail" (com campo de e-mail).
+- **Mostra:** botão "Entrar com GitHub" e "Receber código por e-mail" (com campo de e-mail); depois do envio, campo para o código de 6 dígitos, "Enviar outro código" e "Usar outro e-mail".
 - **Comportamento:** depois do login, volta à página de origem (parâmetro `next`); sem origem, o administrador vai para `/admin` e o usuário comum para `/requests`.
 - **Estados:** botão em espera · mensagem quando o login falha ou o Supabase está fora do ar.
 - **API:** Supabase Auth; `GET /api/auth/callback`.
@@ -1275,7 +1275,7 @@ Uma fase só está pronta quando todas as suas histórias cumprem os critérios 
 
 **US-4.1 — Como administrador, quero entrar pelo Supabase, para só eu gerenciar.** · depende de US-1.1
 
-- **Entregas:** projeto Supabase usado só para Auth (GitHub e link por e-mail); `src/lib/supabase/client.ts`, `server.ts` e `proxy.ts`; `src/proxy.ts` renovando a sessão, com `matcher` que exclui `_next/static`, `_next/image` e arquivos estáticos; `GET /api/auth/callback`; `POST /api/auth/signout`; tela T04; layout `/admin` com guarda.
+- **Entregas:** projeto Supabase usado só para Auth (GitHub e e-mail; código de 6 dígitos desde a F9); `src/lib/supabase/client.ts`, `server.ts` e `proxy.ts`; `src/proxy.ts` renovando a sessão, com `matcher` que exclui `_next/static`, `_next/image` e arquivos estáticos; `GET /api/auth/callback`; `POST /api/auth/signout`; tela T04; layout `/admin` com guarda.
 - **Critérios de aceite:**
   1. RF-18 (1), (3) e (4).
   2. No primeiro login, o `User` é criado com o mesmo id do Supabase; o e-mail igual a `ADMIN_EMAIL` recebe `ADMIN` e os demais `USER`.
