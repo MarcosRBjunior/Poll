@@ -17,7 +17,7 @@ test("CT-15: /admin sem sessão redireciona para /login guardando a origem", asy
 test("/login valida o e-mail antes de chamar o Supabase", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("E-mail").fill("não é e-mail");
-  await page.getByRole("button", { name: "Receber link por e-mail" }).click();
+  await page.getByRole("button", { name: "Receber código por e-mail" }).click();
   await expect(page.getByText("Informe um e-mail válido.")).toBeVisible();
 });
 

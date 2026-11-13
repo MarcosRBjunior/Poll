@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache, Suspense } from "react";
@@ -11,6 +12,9 @@ import { isRespondentToken, RESPONDENT_COOKIE } from "@/lib/respondent";
 
 // Uma busca por requisição, dividida entre o título da aba e a página.
 const loadSurvey = cache(async (slug: string) => {
+  // Na pré-busca com cookies, o Supabase lê a hora atual ao validar a sessão (Date.now):
+  // a página fica para o momento da requisição, que é quando ela depende de quem visita.
+  await connection();
   const [cookieStore, user] = await Promise.all([cookies(), getCurrentUser()]);
   const token = cookieStore.get(RESPONDENT_COOKIE)?.value;
   try {

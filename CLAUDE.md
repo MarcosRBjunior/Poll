@@ -30,7 +30,7 @@ App web full-stack: o administrador cria pesquisas sem código, qualquer pessoa 
 
 ## Decisões tomadas (não reabrir sem pedido)
 
-- **Login (D-01):** Supabase Auth com GitHub e link por e-mail. O `User` local espelha o usuário do Supabase (mesmo id) e é criado no primeiro login.
+- **Login (D-01):** Supabase Auth com GitHub e código de 6 dígitos por e-mail (o navegador confere o código; `POST /api/auth/complete` espelha o User). O `User` local espelha o usuário do Supabase (mesmo id) e é criado no primeiro login.
 - **Administrador (D-13):** só o e-mail em `ADMIN_EMAIL` tem papel `ADMIN`. Só ele cria e gerencia pesquisas e grupos. Usuários com conta apenas solicitam pesquisas (RF-21, RF-22).
 - **Respondente (D-02):** anônimo por padrão; login opcional. Com login, o envio grava `userId`.
 - **Duplicidade (D-05):** um envio por pesquisa — por conta com login, por cookie sem login — mais limite por IP e chave de idempotência.
