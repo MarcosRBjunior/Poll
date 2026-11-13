@@ -133,7 +133,7 @@ npm run vercel-build # prisma generate && prisma migrate deploy && next build
 
 Validadas com Zod em `src/lib/env.ts`; o app não sobe se faltar alguma obrigatória. Documentar todas em `.env.example`, sem valores.
 
-`DATABASE_URL` (pool, app) · `DIRECT_URL` (migrações) · `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` · `ADMIN_EMAIL` · `RESPONDENT_KEY_SECRET` · opcionais: `SENTRY_DSN`, `RATE_LIMIT_REDIS_URL`
+`DATABASE_URL` (app, sem pool) · `DATABASE_URL_POOLED` (app com pool, opcional; tem precedência) · `DIRECT_URL` (migrações) · `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` · `ADMIN_EMAIL` · `RESPONDENT_KEY_SECRET` · opcionais: `SENTRY_DSN`, `RATE_LIMIT_REDIS_URL`
 
 ## Armadilhas de versão
 

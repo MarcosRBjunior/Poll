@@ -6,6 +6,9 @@ import { z } from "zod";
 export const serverEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.url(),
+  // Prisma Postgres na Vercel: DATABASE_URL é a conexão direta (db.prisma.io), com poucas
+  // conexões. O app usa a com pool (pooled.db.prisma.io) quando ela existe.
+  DATABASE_URL_POOLED: z.url().optional(),
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string(),
   // Normalizado para a comparação com o e-mail da sessão não depender de caixa ou espaços.
