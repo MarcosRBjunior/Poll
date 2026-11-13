@@ -34,12 +34,19 @@ O teste roda três cenários, com 10 conexões simultâneas:
 
 ## Resultados
 
-| Data | Alvo | Resultados (API) p95 | Página T10 p95 | Envio p95 |
-| --- | --- | --- | --- | --- |
-| 12/11/2026 | Local: `next start` + Postgres no Docker | 388 ms | 1.419 ms | 186 ms |
+A medição feita daqui inclui o trajeto da rede: Brasil → borda da Vercel em São Paulo (`gru1`) → função em Washington (`iad1`), perto do banco. Esse trajeto soma uns 300 ms por requisição. O tempo dentro do servidor vem do campo `durationMs` dos logs (`vercel logs --json`).
 
-Sobre a medição local:
+| Data | Alvo | Conexões | Resultados (API) p95 | Página T10 p95 | Envio p95 |
+| --- | --- | --- | --- | --- | --- |
+| 12/11/2026 | Local (`next start` + Docker) | 10 | 388 ms | 1.419 ms | 186 ms |
+| 13/11/2026 | Preview, conexão direta | 10 | 881 ms | 2.722 ms | 619 ms, com 40 erros 500 |
+| 13/11/2026 | Preview, com pool | 10 | 887 ms (servidor: 591) | 2.854 ms | 812 ms (servidor: 505) |
+| 13/11/2026 | Preview, com pool | 3 | 563 ms (servidor: 237) | 1.048 ms | 578 ms (servidor: 233) |
+| 13/11/2026 | Preview, com pool | 1 | 525 ms | 738 ms | — |
 
-- **Página T10 perto do limite.** Com 10 conexões, ela fica perto da meta porque tudo divide um processo Node e um pool de 3 conexões com o banco.
-- **Sem concorrência.** Com uma conexão só, a página leva p95 194 ms e a API, 101 ms.
-- **Banco não é o gargalo.** Com 10 mil respostas, a consulta mais pesada (contagem por opção) leva 86 ms. As varreduras sequenciais são esperadas, porque a pesquisa ocupa quase a tabela inteira. Não foi preciso criar índices.
+### O que a carga mostrou
+
+- **Conexão direta derruba o app.** Os 40 erros 500 eram `too many connections`. No plano grátis, o Prisma Postgres aceita poucas conexões diretas, e cada instância da função abre as suas. Mesmo depois da carga, as instâncias paradas ficaram minutos segurando 29 conexões ociosas, e o deploy seguinte falhou na migração. Correção: o app usa `DATABASE_URL_POOLED` (`pooled.db.prisma.io`) quando ela existe e devolve conexões ociosas depois de 5 s. Com o pool, não houve mais erro.
+- **Banco não é o gargalo.** Com 10 mil respostas, as consultas levam dezenas de milissegundos.
+- **Com 3 acessos simultâneos, as metas passam no servidor.** Dados: resultados p95 237 ms, envio 233 ms. A página T10 fica em 1.048 ms medida daqui.
+- **Com 10 acessos simultâneos, a página T10 passa da meta.** A Vercel coloca vários acessos na mesma instância. A página faz umas 7 consultas, e cada instância tem 3 conexões, então as consultas fazem fila. Se a página precisar aguentar esse volume, as saídas são: cache dos resultados limpo a cada envio (CT-13 exige ver o resultado atualizado) ou juntar as consultas dos textos.
