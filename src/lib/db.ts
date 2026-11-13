@@ -8,12 +8,14 @@ const globalForDb = globalThis as unknown as { db?: PrismaClient };
 let client: PrismaClient | undefined;
 
 function createClient() {
+  const env = getEnv();
   const adapter = new PrismaPg({
-    connectionString: getEnv().DATABASE_URL,
-    // Por ora DATABASE_URL na Vercel é a conexão direta (db.prisma.io): a integração não deixa
-    // editá-la para pooled.db.prisma.io. Pool pequeno para caber no plano gratuito.
-    // Pendência para a F9: usar a URL com pool.
+    // Com pool do Prisma Postgres quando houver (spec 10.1): a conexão direta do plano
+    // gratuito aceita poucas, e cada instância da função abre as suas.
+    connectionString: env.DATABASE_URL_POOLED ?? env.DATABASE_URL,
     max: 3,
+    // Instância parada não segura conexão: devolve as ociosas depois de 5 s.
+    idleTimeoutMillis: 5_000,
     connectionTimeoutMillis: 5_000,
   });
   return new PrismaClient({ adapter });
