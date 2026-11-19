@@ -60,7 +60,7 @@ jobs:
       - run: npm audit --omit=dev --audit-level=low
       - run: npm audit --audit-level=high
       # Segredo no código ou no histórico barra o merge (spec 10.2). O relatório não mostra o valor.
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: false
